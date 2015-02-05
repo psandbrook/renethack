@@ -1,10 +1,9 @@
 import pygame
 from pygame import Surface
 
-from renethack import world, entity
+import renethack
 from renethack.gui import Label, Button, WorldDisplay
-from renethack.world import make_world
-from renethack.entity import Hero
+from renethack.entity_types import Hero
 from renethack.util import validate
 
 LEVELS = 10
@@ -43,7 +42,7 @@ class MainMenu:
             ]
 
     # return: 'State'|None
-    def step(self, ms_per_step: int):
+    def step(self, ms_per_step: float):
         """Step this main menu state."""
         validate(self.step, locals())
 
@@ -88,19 +87,25 @@ class MainGame:
     def __init__(self) -> None:
         """Initialise this object to its default state."""
 
-        self.hero = entity.rand_hero('Hero')
+        self.hero = renethack.entity.rand_hero('Hero')
 
-        self.world = make_world(
+        self.world = renethack.world.make_world(
             levels=LEVELS,
             level_length=LEVEL_LENGTH,
             hero=self.hero
             )
 
-        self.world_display = WorldDisplay(self.world)
+        self.world_display = WorldDisplay(
+            pos=(0.5, 0.5),
+            width=0.6,
+            height=1.0,
+            world=self.world
+            )
+
         self.components = [self.world_display]
 
     # return: 'State'|None
-    def step(self, ms_per_step: int):
+    def step(self, ms_per_step: float):
         """Step the game state."""
         validate(self.step, locals())
 
@@ -127,7 +132,8 @@ class MainGame:
 
         if self.hero.energy < 100 or len(self.hero.actions) > 0:
             # If we're not waiting for input, step the world:
-            self.world = world.step(self.world)
+            self.world = renethack.world.step(self.world)
+            self.world_display.world = self.world
 
         # If we are waiting for input, don't step the world.
 

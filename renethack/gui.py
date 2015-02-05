@@ -1,16 +1,20 @@
+import os
+from types import GeneratorType
+
 import pygame
-from pygame import Surface
+from pygame import Surface, PixelArray
 from pygame.event import EventType
 
-from renethack.util import validate
+from renethack.entity_types import Hero
+from renethack.util import validate, get_maindir, raw_filename, clamp
 
 class Label:
 
-    # pos: (int, int)
+    # pos: (float, float)
     def __init__(
             self,
             pos: tuple,
-            height: int,
+            height: float,
             text: str,
             font_type: str) -> None:
 
@@ -33,7 +37,7 @@ class Label:
         """Check `event` with this element."""
         validate(self.check_event, locals())
 
-    def step(self, ms_per_step: int) -> None:
+    def step(self, ms_per_step: float) -> None:
         """Update this element."""
         validate(self.step, locals())
 
@@ -41,7 +45,11 @@ class Label:
         """Render this label to the given surface."""
         validate(self.render, locals())
 
-        font_render = self.font.render(self.text, True, (255, 255, 255))
+        font_render = self.font.render(
+            self.text,
+            True,
+            (255, 255, 255)
+            )
 
         centre_xoffset = font_render.get_width() / 2
         centre_yoffset = font_render.get_height() / 2
@@ -54,12 +62,12 @@ class Label:
 
 class Button:
 
-    # pos: (int, int)
+    # pos: (float, float)
     def __init__(
             self,
             pos: tuple,
-            width: int,
-            height: int,
+            width: float,
+            height: float,
             text: str) -> None:
         """Create a button that is displayed on screen.
 
@@ -111,7 +119,7 @@ class Button:
             self.pressed = True
             self.pressed_this_step = True
 
-    def step(self, ms_per_step: int) -> None:
+    def step(self, ms_per_step: float) -> None:
         """Step this button by `ms_per_step`."""
         validate(self.step, locals())
 
@@ -152,21 +160,155 @@ class Button:
 
 class WorldDisplay:
 
+    # pos: (float, float)
     # world: ([Level], Level, [Level])
-    def __init__(self, world: tuple) -> None:
+    def __init__(
+            self,
+            pos: tuple,
+            width: float,
+            height: float,
+            world: tuple) -> None:
         """Initialise this display with `world`."""
         validate(self.__init__, locals())
 
+        surface_w, surface_h = pygame.display.get_surface().get_size()
+        pos_x, pos_y = pos
+
+        self.rect = pygame.Rect(
+            surface_w * (pos_x - width / 2),
+            surface_h * (pos_y - height / 2),
+            surface_w * width,
+            surface_h * height
+            )
+        # Create a rectangle with the correct top-left position.
+
         self.world = world
+        _, level, _ = self.world
+        level_length = len(level.tiles)
+
+        rect_width, rect_height = self.rect.size
+
+        self.tile_length = min(
+            rect_width // level_length,
+            rect_height // level_length
+            )
+        # Calculate the length of each tile in pixels.
+
+        def icon_entries():
+
+            icon_dir = os.path.join(get_maindir(), 'data', 'icons')
+
+            for file in os.listdir(icon_dir):
+
+                full_path = os.path.join(icon_dir, file)
+                name = raw_filename(file)
+
+                icon = pygame.transform.scale(
+                    pygame.image.load(full_path),
+                    (self.tile_length, self.tile_length)
+                    )
+
+                yield name, icon
+
+        self.icons = dict(icon_entries())
+        # Create a dictionary of names to `Surface` objects.
+
+        def y_rects(x: int) -> GeneratorType:
+            validate(y_rects, locals())
+
+            display_botleft_x, display_botleft_y = self.rect.bottomleft
+
+            for y in range(level_length):
+
+                topleft_x = display_botleft_x + self.tile_length*x
+                topleft_y = display_botleft_y - self.tile_length * (y + 1)
+
+                yield pygame.Rect(
+                    topleft_x,
+                    topleft_y,
+                    self.tile_length,
+                    self.tile_length
+                    )
+
+        self.tile_rects = [list(y_rects(x)) for x in range(level_length)]
+        # A list of rectangles that indicate where each tile should
+        # be rendered.
+
+        self.hover = None
 
     def check_event(self, event: EventType) -> None:
         """Update this component using `event`."""
         validate(self.check_event, locals())
 
-    def step(self, ms_per_step: int) -> None:
+        _, level, _ = self.world
+        level_length = len(level.tiles)
+
+        if event.type == pygame.MOUSEMOTION:
+
+            for x in range(level_length):
+                for y in range(level_length):
+
+                    if self.tile_rects[x][y].collidepoint(event.pos):
+                        self.hover = (x, y)
+                        return
+
+            self.hover = None
+
+
+    def step(self, ms_per_step: float) -> None:
         """Step this component by `ms_per_step`."""
         validate(self.step, locals())
 
     def render(self, surface: Surface) -> None:
         """Render this display to the given surface."""
         validate(self.render, locals())
+
+        _, level, _ = self.world
+        level_length = len(level.tiles)
+
+        # Render the level tile by tile:
+        for x in range(level_length):
+            for y in range(level_length):
+
+                tile = level.tiles[x][y]
+                rect = self.tile_rects[x][y]
+
+                if tile.entity is not None:
+                    # If there is an entity on the tile,
+                    # render it instead:
+
+                    if isinstance(tile.entity, Hero):
+                        icon = self.icons['Hero'].copy()
+
+                    else:
+                        icon = self.icons[tile.entity.name].copy()
+
+                else:
+                    icon = self.icons[tile.type.name].copy()
+
+                if self.hover == (x, y):
+                    icon = colourise(icon, (64, 64, 64))
+
+                surface.blit(icon, rect)
+
+def colourise(surface: Surface, rgb: tuple) -> Surface:
+    """
+    Return a new surface with an rgb value added
+    to all the pixels on it.
+    """
+    validate(colourise, locals())
+
+    r, g, b = rgb
+    pixels = PixelArray(surface.copy())
+
+    for x in range(surface.get_width()):
+        for y in range(surface.get_height()):
+
+            px_colour = surface.unmap_rgb(pixels[x][y])
+            new_r = clamp(px_colour.r + r, 0, 225)
+            new_g = clamp(px_colour.g + g, 0, 225)
+            new_b = clamp(px_colour.b + b, 0, 225)
+
+            pixels[x][y] = (new_r, new_g, new_b)
+
+    return pixels.surface

@@ -1,52 +1,32 @@
-import collections
 import random
 
-from renethack.entity import Hero, Monster
-from renethack.util import validate, forany
+import renethack
+from renethack.world_types import Level, Tile, TileType, ExistingEntityError, TileNotPassableError
+from renethack.entity_types import Hero
+from renethack.util import validate, forany, rand_chance
 
-MAX_MONSTERS = 10
+MAX_MONSTERS = 6
 
-Level = collections.namedtuple('Level', 'tiles entities')
-# tiles: [[Tile]]
-# entities: [(int, int)]
-
-Tile = collections.namedtuple('Tile', 'type items entity')
-# type: TileType
-# items: [Item]
-# entity: Monster|Hero|None
-
-TileType = collections.namedtuple('TileType', 'name passable')
-# name: str
-# passable: bool
-
-solid_earth = TileType('solid_earth', passable=False)
-wall = TileType('wall', passable=False)
-floor = TileType('floor', passable=True)
-up_stairs = TileType('up_stairs', passable=True)
-down_stairs = TileType('down_stairs', passable=True)
-closed_door = TileType('closed_door', passable=False)
-open_door = TileType('open_door', passable=True)
-
-# point: (int, int)
-def apply_point(level: Level, point: tuple) -> Tile:
-    """Return the `Tile` given by applying `point` to `level`."""
-    validate(apply_point, locals())
-
-    x, y = point
-    return level.tiles[x][y]
+solid_earth = TileType('Solid earth', passable=False)
+wall = TileType('Wall', passable=False)
+floor = TileType('Floor', passable=True)
+up_stairs = TileType('Upwards stairway', passable=True)
+down_stairs = TileType('Downwards stairway', passable=True)
+closed_door = TileType('Closed door', passable=False)
+open_door = TileType('Open door', passable=True)
 
 # return: ([Level], Level, [Level])
 def make_world(levels: int, level_length: int, hero: Hero) -> tuple:
     """Returns a randomly generated dungeon.
 
     return: ([Level], Level, [Level])
-        first: levels above the current one
+        levels above the current one
         second: current level
         third: levels below the current one
     """
     validate(make_world, locals())
 
-    centre = int((level_length-1) / 2)
+    centre = (level_length - 1) // 2
     # The centre of each level.
 
     def make_level(place_down_stairs: bool) -> Level:
@@ -62,38 +42,38 @@ def make_world(levels: int, level_length: int, hero: Hero) -> tuple:
         level = Level(tiles=tiles, entities=[])
 
         # Create the centre room:
+
         centre_width = rand_room_len()
         centre_height = rand_room_len()
 
-        # From the centre point, go west by centre_width / 2
-        # and south by centre_height / 2.
-        centre_fill_point = south(
-            int(centre_height/2),
-            west(int(centre_width/2), (centre, centre))
+        fill_rect(
+            level,
+            point=(
+                centre - centre_width//2 - 1,
+                centre - centre_height//2 - 1
+                ),
+            width=centre_width + 2,
+            height=centre_height + 2,
+            type_=wall
             )
 
         fill_rect(
-            level=level,
-            point=centre_fill_point,
-            width=centre_width+2,
-            height=centre_height+2,
-            type=wall
-            )
-
-        fill_rect(
-            level=level,
-            point=northeast(1, centre_fill_point),
+            level,
+            point=(
+                centre - centre_width//2,
+                centre - centre_height//2
+                ),
             width=centre_width,
             height=centre_height,
-            type=floor
+            type_=floor
             )
 
-        level[centre][centre] = new_tile(up_stairs)
+        level.tiles[centre][centre] = new_tile(up_stairs)
 
         # Keep creating rooms until there are
-        # 1000 contiguous rejections:
+        # 20 contiguous rejections:
         reject_count = 0
-        while reject_count < 1000:
+        while reject_count < 20:
 
             # point: (int, int)
             def valid_wall_point(point: tuple) -> bool:
@@ -105,14 +85,20 @@ def make_world(levels: int, level_length: int, hero: Hero) -> tuple:
                 """
                 validate(valid_wall_point, locals())
 
+                x, y = point
+
                 points = [
-                    north(1, point),
-                    south(1, point),
-                    east(1, point),
-                    west(1, point)
+                    (x, y + 1),
+                    (x, y - 1),
+                    (x + 1, y),
+                    (x - 1, y)
                     ]
 
-                tiles = [apply_point(level, p) for p in points]
+                for p in points:
+                    if not point_within(level_length, p):
+                        return False
+
+                tiles = [level.tiles[x][y] for x, y in points]
 
                 return forany(lambda t: t.type is floor, tiles)
 
@@ -130,12 +116,13 @@ def make_world(levels: int, level_length: int, hero: Hero) -> tuple:
         # Place the downwards stairway:
         if place_down_stairs:
             down_x, down_y = random.choice(get_tiles(level, floor))
-            level[down_x][down_y] = new_tile(down_stairs)
+            level.tiles[down_x][down_y] = new_tile(down_stairs)
 
-        return Level(tiles=level, entities=[])
+        return level
 
     # Create a list of levels:
-    world = [make_level(True) for _ in range(levels-1)] + [make_level(False)]
+    world = ([make_level(place_down_stairs=True) for _ in range(levels - 1)]
+        + [make_level(place_down_stairs=False)])
 
     # Add the hero at the centre point on the first level:
     add_entity(world[0], (centre, centre), hero)
@@ -143,27 +130,39 @@ def make_world(levels: int, level_length: int, hero: Hero) -> tuple:
     return ([], world[0], world[1:])
 
 # TileType -> Tile
-def new_tile(type):
+def new_tile(type_: TileType) -> Tile:
     """Returns a new `Tile` object that is initially empty."""
+    validate(new_tile, locals())
+
     return Tile(
-        type=type,
-        flashing=False,
+        type_,
         items=[],
         entity=None
         )
 
-# ([[Tile]], (int, int), int, int, TileType) -> None
-def fill_rect(level, point, width, height, type):
+# point: (int, int)
+def fill_rect(
+        level: Level,
+        point: tuple,
+        width: int,
+        height: int,
+        type_: TileType) -> None:
     """Fill a rectangular area on `level`."""
+    validate(fill_rect, locals())
 
     x, y = point
 
     for i in range(x, x + width):
         for j in range(y, y + height):
-            level[i][j] = new_tile(type)
+            level.tiles[i][j] = new_tile(type_)
 
-# ([[Tile]], (int, int), int, int, TileType) -> None
-def check_fill_rect(level, point, width, height, type):
+# point: (int, int)
+def check_fill_rect(
+        level: Level,
+        point: tuple,
+        width: int,
+        height: int,
+        type_: TileType) -> None:
     """Fill a rectangular area on `level`.
 
     The area is only filled if every tile in the area has type
@@ -171,227 +170,400 @@ def check_fill_rect(level, point, width, height, type):
 
     Returns true if fill is successful, false otherwise.
     """
+    validate(check_fill_rect, locals())
 
     x, y = point
+    level_length = len(level.tiles)
+
+    if (not point_within(level_length, point)
+            or not point_within(level_length, (x + width, y + height))):
+        return False
 
     for i in range(x, x + width):
         for j in range(y, y + height):
 
-            if level[i][j].type != solid_earth:
+            if level.tiles[i][j].type != solid_earth:
                 return False
 
     for i in range(x, x + width):
         for j in range(y, y + height):
-            level[i][j] = new_tile(type)
+            level.tiles[i][j] = new_tile(type_)
 
     return True
 
-# ([[Tile]], (int, int)) -> bool
-def make_room(level, wall_point):
+# wall_point: (int, int)
+def make_room(level: Level, wall_point: tuple) -> bool:
     """Create a room on `level` at `wall_point`.
 
     The tile at `wall_point` should be a wall.
     """
+    validate(make_room, locals())
 
+    x, y = wall_point
     width = rand_room_len()
     height = rand_room_len()
 
     # North:
-    north_fill_point = north(1, west(int(width/2), wall_point))
-    if check_fill_rect(level, north_fill_point, width+2, height+1, wall):
 
-        fill_rect(level, east(1, north_fill_point), width, hight, floor)
-        fill_rect(level, south(1, north_fill_point), width+2, 1, wall)
+    north_check = check_fill_rect(
+        level,
+        point=(x - width//2 - 1, y + 1),
+        width=width + 2,
+        height=height + 1,
+        type_=wall
+        )
 
-        x, y = wall_point
-        level[x][y] = new_tile(closed_door)
+    if north_check:
+
+        fill_rect(
+            level,
+            point=(x - width//2, y + 1),
+            width=width,
+            height=height,
+            type_=floor
+            )
+
+        fill_rect(
+            level,
+            point=(x - width//2 - 1, y),
+            width=width + 2,
+            height=1,
+            type_=wall
+            )
+
+        level.tiles[x][y] = new_tile(closed_door)
 
         return True
 
     # South:
-    south_fill_point = west(int(width/2), south(height+1, wall_point))
-    if check_fill_rect(level, south_fill_point, width+2, height+1, wall):
 
-        fill_rect(level, northeast(1, south_fill_point), width, height, floor)
-        fill_rect(level, north(height+1, south_fill_point), width+2, 1, wall)
+    south_check = check_fill_rect(
+        level,
+        point=(x - width//2 - 1, y - height - 1),
+        width=width + 2,
+        height=height + 1,
+        type_=wall
+        )
 
-        x, y = wall_point
-        level[x][y] = new_tile(closed_door)
+    if south_check:
+
+        fill_rect(
+            level,
+            point=(x - width//2, y - height),
+            width=width,
+            height=height,
+            type_=floor
+            )
+
+        fill_rect(
+            level,
+            point=(x - width//2 - 1, y),
+            width=width + 2,
+            height=1,
+            type_=wall
+            )
+
+        level.tiles[x][y] = new_tile(closed_door)
 
         return True
 
     # East:
-    east_fill_point = east(1, south(int(height/2), wall_point))
-    if check_fill_rect(level, east_fill_point, width+1, height+2, wall):
 
-        fill_rect(level, north(1, east_fill_point), width, height, floor)
-        fill_rect(level, west(1, east_fill_point), 1, height+2, wall)
+    east_check = check_fill_rect(
+        level,
+        point=(x + 1, y - height//2 - 1),
+        width=width + 1,
+        height=height + 2,
+        type_=wall
+        )
 
-        x, y = wall_point
-        level[x][y] = new_tile(closed_door)
+    if east_check:
+
+        fill_rect(
+            level,
+            point=(x + 1, y - height//2),
+            width=width,
+            height=height,
+            type_=floor
+            )
+
+        fill_rect(
+            level,
+            point=(x, y - height//2 - 1),
+            width=1,
+            height=height + 2,
+            type_=wall
+            )
+
+        level.tiles[x][y] = new_tile(closed_door)
 
         return True
 
     # West:
-    west_fill_point = west(width+1, south(int(height/2), wall_point))
-    if check_fill_rect(level, west_fill_point, width+1, height+2, wall):
 
-        fill_rect(level, northeast(1, west_fill_point), width, height, floor)
-        fill_rect(level, east(width+1, west_fill_point), 1, height+2, wall)
+    west_check = check_fill_rect(
+        level,
+        point=(x - width - 1, y - height//2 - 1),
+        width=width + 1,
+        height=height + 2,
+        type_=wall
+        )
 
-        x, y = wall_point
-        level[x][y] = new_tile(closed_door)
+    if west_check:
+
+        fill_rect(
+            level,
+            point=(x - width, y - height//2),
+            width=width,
+            height=height,
+            type_=floor
+            )
+
+        fill_rect(
+            level,
+            point=(x, y - height//2 - 1),
+            width=1,
+            height=height + 2,
+            type_=wall
+            )
+
+        level.tiles[x][y] = new_tile(closed_door)
 
         return True
 
     # If there is no space on any side:
     return False
 
-# ([[Tile]], (int, int)) -> bool
-def make_corridor(level, wall_point):
+# wall_point: (int, int)
+def make_corridor(level: Level, wall_point: tuple) -> bool:
     """Create a corridor on `level` at `wall_point`.
 
     The tile at `wall_point` should be a wall.
     """
+    validate(make_corridor, locals())
 
+    x, y = wall_point
     length = random.randint(5, 15)
 
     # North:
-    if check_fill_rect(level, northwest(1, wall_point), 3, length+1, wall):
 
-        fill_rect(level, north(1, wall_point), 1, length, floor)
-        fill_rect(level, west(1, wall_point), 3, 1, wall)
+    north_check = check_fill_rect(
+        level,
+        point=(x - 1, y + 1),
+        width=3,
+        height=length + 1,
+        type_=wall
+        )
 
-        x, y = wall_point
-        level[x][y] = new_tile(closed_door)
+    if north_check:
+
+        fill_rect(
+            level,
+            point=(x, y + 1),
+            width=1,
+            height=length,
+            type_=floor
+            )
+
+        fill_rect(
+            level,
+            point=(x - 1, y),
+            width=3,
+            height=1,
+            type_=wall
+            )
+
+        level.tiles[x][y] = new_tile(closed_door)
 
         return True
 
     # South:
-    south_fill_point = west(1, south(length+1, wall_point))
-    if check_fill_rect(level, south_fill_point, 3, length+1, wall):
 
-        fill_rect(level, northeast(1, south_fill_point), 1, length, floor)
-        fill_rect(level, west(1, wall_point), 3, 1, wall)
+    south_check = check_fill_rect(
+        level,
+        point=(x - 1, y - length - 1),
+        width=3,
+        height=length + 1,
+        type_=wall
+        )
 
-        x, y = wall_point
-        level[x][y] = new_tile(closed_door)
+    if south_check:
+
+        fill_rect(
+            level,
+            point=(x, y - length),
+            width=1,
+            height=length,
+            type_=floor
+            )
+
+        fill_rect(
+            level,
+            point=(x - 1, y),
+            width=3,
+            height=1,
+            type_=wall
+            )
+
+        level.tiles[x][y] = new_tile(closed_door)
 
         return True
 
     # East:
-    if check_fill_rect(level, northeast(1, wall_point), length+1, 3, wall):
 
-        fill_rect(level, east(1, wall_point), length, 1, floor)
-        fill_rect(level, south(1, wall_point), 1, 3, wall)
+    east_check = check_fill_rect(
+        level,
+        point=(x + 1, y - 1),
+        width=length + 1,
+        height=3,
+        type_=wall
+        )
 
-        x, y = wall_point
-        level[x][y] = new_tile(closed_door)
+    if east_check:
+
+        fill_rect(
+            level,
+            point=(x + 1, y),
+            width=length,
+            height=1,
+            type_=floor
+            )
+
+        fill_rect(
+            level,
+            point=(x, y - 1),
+            width=1,
+            height=3,
+            type_=wall
+            )
+
+        level.tiles[x][y] = new_tile(closed_door)
 
         return True
 
     # West:
-    west_fill_point = south(1, west(length+1, wall_point))
-    if check_fill_rect(level, west_fill_point, length+1, 3, wall):
 
-        fill_rect(level, northeast(1, west_fill_point), length, 1, floor)
-        fill_rect(level, south(1, wall_point), 1, 3, wall)
+    west_check = check_fill_rect(
+        level,
+        point=(x - length - 1, y - 1),
+        width=length + 1,
+        height=3,
+        type_=wall
+        )
 
-        x, y = wall_point
-        level[x][y] = new_tile(closed_door)
+    if west_check:
+
+        fill_rect(
+            level,
+            point=(x - length, y),
+            width=length,
+            height=1,
+            type_=floor
+            )
+
+        fill_rect(
+            level,
+            point=(x, y - 1),
+            width=1,
+            height=3,
+            type_=wall
+            )
+
+        level.tiles[x][y] = new_tile(closed_door)
 
         return True
 
     # If there is no space on any side:
     return False
 
-elements = [make_room, make_corridor]
-# The list of functions that add an element to a level.
+def get_tiles(level: Level, type_: TileType) -> list:
+    """Returns the list of points on `level` with tile type `type_`."""
+    validate(get_tiles, locals())
 
-# ([[Tile]], TileType) -> [(int, int)]
-def get_tiles(level, type):
-    """Returns the list of points on `level` with tile type `type`."""
-    level_length = len(level)
+    level_length = len(level.tiles)
+
     return [
         (x, y)
         for x in range(level_length)
         for y in range(level_length)
-        if level[x][y].type == type
+        if level.tiles[x][y].type is type_
         ]
 
-# () -> int
-def rand_room_len():
+def rand_room_len() -> int:
     """Returns a random integer suitable for the length of a room."""
     return random.randint(4, 7)
 
-# (int, (int, int)) -> (int, int)
-def north(amount, point):
-    x, y = point
-    return (x, y + amount)
+def point_within(length: int, point: tuple) -> bool:
+    """
+    Check whether a point is within a square grid
+    of length `length`.
+    """
+    validate(point_within, locals())
 
-# (int, (int, int)) -> (int, int)
-def south(amount, point):
     x, y = point
-    return (x, y - amount)
+    return 0 <= x < length and 0 <= y < length
 
-# (int, (int, int)) -> (int, int)
-def east(amount, point):
+# point: (int, int)
+def add_entity(level: Level, point: tuple, entity) -> None:
+    """Adds an entity to `level` at `point`."""
+    validate(add_entity, locals())
+
     x, y = point
-    return (x + amount, y)
+    tile = level.tiles[x][y]
 
-# (int, (int, int)) -> (int, int)
-def west(amount, point):
-    x, y = point
-    return (x - amount, y)
+    if tile.entity is not None:
+        raise ExistingEntityError(point)
 
-# (int, (int, int)) -> (int, int)
-def northeast(amount, point):
-    x, y = point
-    return (x + amount, y + amount)
+    elif not tile.type.passable:
+        raise TileNotPassableError(point)
 
-# (int, (int, int)) -> (int, int)
-def southeast(amount, point):
-    x, y = point
-    return (x + amount, y - amount)
+    else:
+        tile.entity = entity
+        level.entities.append(point)
 
-# (int, (int, int)) -> (int, int)
-def southwest(amount, point):
-    x, y = point
-    return (x - amount, y - amount)
+# point: (int, int)
+def remove_entity(level: Level, point: tuple) -> None:
+    """Removes the entity on `level` at `point`."""
+    validate(remove_entity, locals())
 
-# (int, (int, int)) -> (int, int)
-def northwest(amount, point):
-    x, y = point
-    return (x - amount, y + amount)
-
-# (Level, (int, int), Monster|Hero) -> None
-def add_entity(level, point, entity):
-    x, y = point
-    level.tiles[x][y].entity = entity
-    level.entities.append(point)
-
-# (Level, (int, int)) -> None
-def remove_entity(level, point):
     x, y = point
     level.tiles[x][y].entity = None
     level.entities = [None if p == point else p for p in level.entities]
 
-# (([Level], Level, [Level]), ([Level], Level, [Level])) -> bool
-def worlds_eq(world1, world2):  
+# world1: ([Level], Level, [Level])
+# world2: ([Level], Level, [Level])
+def worlds_eq(world1: tuple, world2: tuple) -> bool:
+    """Checks if two worlds are equal."""
+    validate(worlds_eq, locals())
+
     return len(world1[0]) == len(world2[0])
 
-# ([Level], Level, [Level]) -> ([Level], Level, [Level])
-def step(world):
+# world: ([Level], Level, [Level])
+# return: ([Level], Level, [Level])
+def step(world: tuple) -> tuple:
+    """Update `world` by one step.
+
+    The contents of `world` may by modified.
+    May return a different `world` value.
+    """
+    validate(step, locals())
 
     _, current_level, _ = world
     level_length = len(current_level.tiles)
 
-    # Randomly place new monsters:
-    if len(current_level.entities) < MAX_MONSTERS:
+    # Randomly place a new monster:
+    if len(current_level.entities) - 1 < MAX_MONSTERS:
 
-        for x in range(level_length):
-            for y in range(level_length):
+        x = random.randrange(level_length)
+        y = random.randrange(level_length)
+        tile = current_level.tiles[x][y]
 
+        if (tile.entity is None
+                and tile.type is floor
+                and rand_chance(0.1)):
+
+            monster_fn = random.choice(renethack.entity.monster_fns)
+            add_entity(current_level, (x, y), monster_fn())
 
     # Update each entity on the current level:
     for entity_point in current_level.entities:
@@ -403,7 +575,7 @@ def step(world):
         x, y = entity_point
         entity = current_level.tiles[x][y].entity
 
-        if type(entity) is Hero:
+        if isinstance(entity, Hero):
             new_world = entity.step(entity_point, world)
 
             if not worlds_eq(new_world, world):
@@ -411,7 +583,7 @@ def step(world):
                 return new_world
 
         else:
-            entity.step(entity_point, world)
+            entity.step(entity_point, current_level)
 
     # Clean up removed entities:
     current_level.entities = [
@@ -420,3 +592,6 @@ def step(world):
         ]
 
     return world
+
+elements = [make_room, make_corridor]
+# The list of functions that add an element to a level.

@@ -2,6 +2,7 @@ import os
 import collections
 import pickle
 
+import pygame
 from pygame import Surface
 
 from renethack.util import validate

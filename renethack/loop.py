@@ -2,7 +2,7 @@ import os
 
 import pygame
 
-from renethack import config
+import renethack
 from renethack.config import Config
 from renethack.state import MainMenu
 from renethack.util import get_maindir, get_millitime
@@ -23,12 +23,12 @@ def main_loop() -> None:
 
     default_config = Config(
         fullscreen=False,
-        resolution=(800, 600)
+        resolution=(1366, 768)
         )
     # The default config to use if the config file does not exist.
 
-    read_config = config.read_from(config_path, default_config)
-    surface = config.apply(read_config)
+    read_config = renethack.config.read_from(config_path, default_config)
+    surface = renethack.config.apply(read_config)
 
     state = MainMenu()
 
