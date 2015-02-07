@@ -3,7 +3,7 @@
 import renethack
 
 def main():
-    renethack.loop.main_loop()
+    renethack.loop.start()
 
 if __name__ == '__main__':
     main()

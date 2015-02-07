@@ -194,7 +194,8 @@ class WorldDisplay:
             )
         # Calculate the length of each tile in pixels.
 
-        def icon_entries():
+        def icon_entries() -> GeneratorType:
+            """Generates a dict of names to tile icons."""
 
             icon_dir = os.path.join(get_maindir(), 'data', 'icons')
 
@@ -214,6 +215,7 @@ class WorldDisplay:
         # Create a dictionary of names to `Surface` objects.
 
         def y_rects(x: int) -> GeneratorType:
+            """Generates the `x`th column of rectangles."""
             validate(y_rects, locals())
 
             display_botleft_x, display_botleft_y = self.rect.bottomleft
@@ -231,10 +233,11 @@ class WorldDisplay:
                     )
 
         self.tile_rects = [list(y_rects(x)) for x in range(level_length)]
-        # A list of rectangles that indicate where each tile should
+        # A grid of rectangles that indicate where each tile should
         # be rendered.
 
         self.hover = None
+        self.pressed = None
 
     def check_event(self, event: EventType) -> None:
         """Update this component using `event`."""
@@ -254,10 +257,29 @@ class WorldDisplay:
 
             self.hover = None
 
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+
+            self.pressed_this_step = True
+
+            for x in range(level_length):
+                for y in range(level_length):
+
+                    if self.tile_rects[x][y].collidepoint(event.pos):
+                        self.pressed = (x, y)
+                        return
 
     def step(self, ms_per_step: float) -> None:
         """Step this component by `ms_per_step`."""
         validate(self.step, locals())
+
+        if self.pressed is not None:
+
+            if self.pressed_this_step:
+                self.pressed_this_step = False
+
+            else:
+                self.pressed = None
+                del self.pressed_this_step
 
     def render(self, surface: Surface) -> None:
         """Render this display to the given surface."""
@@ -277,37 +299,33 @@ class WorldDisplay:
                     # If there is an entity on the tile,
                     # render it instead:
 
-                    if isinstance(tile.entity, Hero):
-                        icon = self.icons['Hero'].copy()
-
-                    else:
-                        icon = self.icons[tile.entity.name].copy()
+                    icon = self.icons[tile.entity.icon_name].copy()
 
                 else:
                     icon = self.icons[tile.type.name].copy()
 
                 if self.hover == (x, y):
-                    icon = colourise(icon, (64, 64, 64))
+                    colourise(icon, (64, 64, 64))
 
                 surface.blit(icon, rect)
 
 def colourise(surface: Surface, rgb: tuple) -> Surface:
     """
-    Return a new surface with an rgb value added
+    Returns the same surface with an rgb value added
     to all the pixels on it.
     """
     validate(colourise, locals())
 
     r, g, b = rgb
-    pixels = PixelArray(surface.copy())
+    pixels = PixelArray(surface)
 
     for x in range(surface.get_width()):
         for y in range(surface.get_height()):
 
             px_colour = surface.unmap_rgb(pixels[x][y])
-            new_r = clamp(px_colour.r + r, 0, 225)
-            new_g = clamp(px_colour.g + g, 0, 225)
-            new_b = clamp(px_colour.b + b, 0, 225)
+            new_r = clamp(px_colour.r + r, 0, 255)
+            new_g = clamp(px_colour.g + g, 0, 255)
+            new_b = clamp(px_colour.b + b, 0, 255)
 
             pixels[x][y] = (new_r, new_g, new_b)
 

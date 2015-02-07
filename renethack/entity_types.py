@@ -23,6 +23,7 @@ class Monster:
         self.strength = strength
 
         self.energy = 0
+        self.icon_name = name
 
     # point: (int, int)
     def step(self, point: tuple, level: Level) -> None:
@@ -53,6 +54,7 @@ class Hero:
 
         self.energy = 0
         self.actions = []
+        self.icon_name = 'Hero'
 
     # EventType -> None
     def check_event(self, event: EventType) -> None:

@@ -53,6 +53,10 @@ def raw_filename(path: str) -> str:
     return os.path.basename(root)
 
 def clamp(value, min_, max_):
+    """Returns a value that is within the given bounds.
+
+    If `value` is already within the bounds, `value` is returned.
+    """
 
     if value < min_:
         return min_

@@ -121,8 +121,7 @@ def make_world(levels: int, level_length: int, hero: Hero) -> tuple:
         return level
 
     # Create a list of levels:
-    world = ([make_level(place_down_stairs=True) for _ in range(levels - 1)]
-        + [make_level(place_down_stairs=False)])
+    world = [make_level(True) for _ in range(levels - 1)] + [make_level(False)]
 
     # Add the hero at the centre point on the first level:
     add_entity(world[0], (centre, centre), hero)
@@ -173,10 +172,11 @@ def check_fill_rect(
     validate(check_fill_rect, locals())
 
     x, y = point
+    top_right = (x + width, y + height)
     level_length = len(level.tiles)
 
     if (not point_within(level_length, point)
-            or not point_within(level_length, (x + width, y + height))):
+            or not point_within(level_length, top_right)):
         return False
 
     for i in range(x, x + width):
