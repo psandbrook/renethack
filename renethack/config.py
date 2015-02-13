@@ -5,6 +5,7 @@ import pickle
 import pygame
 from pygame import Surface
 
+import renethack
 from renethack.util import validate
 
 Config = collections.namedtuple('Config', 'fullscreen resolution')
@@ -18,7 +19,6 @@ def apply(config: Config) -> Surface:
     """
     validate(apply, locals())
 
-    # flag: int
     flag = (
         pygame.FULLSCREEN
         | pygame.HWSURFACE

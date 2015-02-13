@@ -1,5 +1,6 @@
 import random
 
+import renethack
 from renethack.entity_types import Hero, Monster
 from renethack.util import validate
 

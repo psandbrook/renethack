@@ -1,7 +1,7 @@
 import random
 
 import renethack
-from renethack.world_types import Level, Tile, TileType, ExistingEntityError, TileNotPassableError
+from renethack.world_types import World, Level, Tile, TileType, ExistingEntityError, TileNotPassableError
 from renethack.entity_types import Hero
 from renethack.util import validate, forany, rand_chance
 
@@ -15,15 +15,8 @@ down_stairs = TileType('Downwards stairway', passable=True)
 closed_door = TileType('Closed door', passable=False)
 open_door = TileType('Open door', passable=True)
 
-# return: ([Level], Level, [Level])
-def make_world(levels: int, level_length: int, hero: Hero) -> tuple:
-    """Returns a randomly generated dungeon.
-
-    return: ([Level], Level, [Level])
-        levels above the current one
-        second: current level
-        third: levels below the current one
-    """
+def make_world(levels: int, level_length: int, hero: Hero) -> World:
+    """Returns a randomly generated `World` object."""
     validate(make_world, locals())
 
     centre = (level_length - 1) // 2
@@ -126,9 +119,8 @@ def make_world(levels: int, level_length: int, hero: Hero) -> tuple:
     # Add the hero at the centre point on the first level:
     add_entity(world[0], (centre, centre), hero)
 
-    return ([], world[0], world[1:])
+    return World(world, (centre, centre))
 
-# TileType -> Tile
 def new_tile(type_: TileType) -> Tile:
     """Returns a new `Tile` object that is initially empty."""
     validate(new_tile, locals())
@@ -139,7 +131,6 @@ def new_tile(type_: TileType) -> Tile:
         entity=None
         )
 
-# point: (int, int)
 def fill_rect(
         level: Level,
         point: tuple,
@@ -155,7 +146,6 @@ def fill_rect(
         for j in range(y, y + height):
             level.tiles[i][j] = new_tile(type_)
 
-# point: (int, int)
 def check_fill_rect(
         level: Level,
         point: tuple,
@@ -191,7 +181,6 @@ def check_fill_rect(
 
     return True
 
-# wall_point: (int, int)
 def make_room(level: Level, wall_point: tuple) -> bool:
     """Create a room on `level` at `wall_point`.
 
@@ -334,7 +323,6 @@ def make_room(level: Level, wall_point: tuple) -> bool:
     # If there is no space on any side:
     return False
 
-# wall_point: (int, int)
 def make_corridor(level: Level, wall_point: tuple) -> bool:
     """Create a corridor on `level` at `wall_point`.
 
@@ -503,7 +491,6 @@ def point_within(length: int, point: tuple) -> bool:
     x, y = point
     return 0 <= x < length and 0 <= y < length
 
-# point: (int, int)
 def add_entity(level: Level, point: tuple, entity) -> None:
     """Adds an entity to `level` at `point`."""
     validate(add_entity, locals())
@@ -521,7 +508,6 @@ def add_entity(level: Level, point: tuple, entity) -> None:
         tile.entity = entity
         level.entities.append(point)
 
-# point: (int, int)
 def remove_entity(level: Level, point: tuple) -> None:
     """Removes the entity on `level` at `point`."""
     validate(remove_entity, locals())
@@ -530,68 +516,51 @@ def remove_entity(level: Level, point: tuple) -> None:
     level.tiles[x][y].entity = None
     level.entities = [None if p == point else p for p in level.entities]
 
-# world1: ([Level], Level, [Level])
-# world2: ([Level], Level, [Level])
-def worlds_eq(world1: tuple, world2: tuple) -> bool:
-    """Checks if two worlds are equal."""
-    validate(worlds_eq, locals())
-
-    return len(world1[0]) == len(world2[0])
-
-# world: ([Level], Level, [Level])
-# return: ([Level], Level, [Level])
-def step(world: tuple) -> tuple:
+def step(world: World):
     """Update `world` by one step.
 
     The contents of `world` may by modified.
-    May return a different `world` value.
     """
     validate(step, locals())
 
-    _, current_level, _ = world
-    level_length = len(current_level.tiles)
+    level_length = len(world.current_level.tiles)
 
     # Randomly place a new monster:
-    if len(current_level.entities) - 1 < MAX_MONSTERS:
+    if len(world.current_level.entities) - 1 < MAX_MONSTERS:
 
         x = random.randrange(level_length)
         y = random.randrange(level_length)
-        tile = current_level.tiles[x][y]
+        tile = world.current_level.tiles[x][y]
 
         if (tile.entity is None
                 and tile.type is floor
                 and rand_chance(0.1)):
 
             monster_fn = random.choice(renethack.entity.monster_fns)
-            add_entity(current_level, (x, y), monster_fn())
+            add_entity(world.current_level, (x, y), monster_fn())
 
     # Update each entity on the current level:
-    for entity_point in current_level.entities:
+    for entity_point in world.current_level.entities:
 
         # Skip over removed entities:
         if entity_point is None:
             continue
 
         x, y = entity_point
-        entity = current_level.tiles[x][y].entity
+        entity = world.current_level.tiles[x][y].entity
+        old_world_len = len(world.upper_levels)
 
-        if isinstance(entity, Hero):
-            new_world = entity.step(entity_point, world)
+        entity.step(entity_point, world)
 
-            if not worlds_eq(new_world, world):
-                # Return immediately if the world has changed.
-                return new_world
-
-        else:
-            entity.step(entity_point, current_level)
+        if old_world_len != len(world.upper_levels):
+            # Return immediately if the world has changed.
+            return
 
     # Clean up removed entities:
-    current_level.entities = [
-        p for p in current_level.entities
+    world.current_level.entities = [
+        p for p in world.current_level.entities
         if p is not None
         ]
-
-    return world
 
 elements = [make_room, make_corridor]
 # The list of functions that add an element to a level.

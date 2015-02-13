@@ -33,8 +33,6 @@ def get_millitime() -> float:
     """
     return time.monotonic() * 1000.0
 
-# pred: a -> bool
-# list_: [a]
 def forany(pred, list_: list) -> bool:
     """Tests whether a predicate holds for any element of the list."""
     validate(forany, locals())

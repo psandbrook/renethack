@@ -5,12 +5,13 @@ import pygame
 from pygame import Surface, PixelArray
 from pygame.event import EventType
 
+import renethack
 from renethack.entity_types import Hero
+from renethack.world_types import World
 from renethack.util import validate, get_maindir, raw_filename, clamp
 
 class Label:
 
-    # pos: (float, float)
     def __init__(
             self,
             pos: tuple,
@@ -62,7 +63,6 @@ class Label:
 
 class Button:
 
-    # pos: (float, float)
     def __init__(
             self,
             pos: tuple,
@@ -160,14 +160,12 @@ class Button:
 
 class WorldDisplay:
 
-    # pos: (float, float)
-    # world: ([Level], Level, [Level])
     def __init__(
             self,
             pos: tuple,
             width: float,
             height: float,
-            world: tuple) -> None:
+            world: World) -> None:
         """Initialise this display with `world`."""
         validate(self.__init__, locals())
 
@@ -183,8 +181,7 @@ class WorldDisplay:
         # Create a rectangle with the correct top-left position.
 
         self.world = world
-        _, level, _ = self.world
-        level_length = len(level.tiles)
+        level_length = len(world.current_level.tiles)
 
         rect_width, rect_height = self.rect.size
 
@@ -243,8 +240,7 @@ class WorldDisplay:
         """Update this component using `event`."""
         validate(self.check_event, locals())
 
-        _, level, _ = self.world
-        level_length = len(level.tiles)
+        level_length = len(self.world.current_level.tiles)
 
         if event.type == pygame.MOUSEMOTION:
 
@@ -285,14 +281,13 @@ class WorldDisplay:
         """Render this display to the given surface."""
         validate(self.render, locals())
 
-        _, level, _ = self.world
-        level_length = len(level.tiles)
+        level_length = len(self.world.current_level.tiles)
 
         # Render the level tile by tile:
         for x in range(level_length):
             for y in range(level_length):
 
-                tile = level.tiles[x][y]
+                tile = self.world.current_level.tiles[x][y]
                 rect = self.tile_rects[x][y]
 
                 if tile.entity is not None:

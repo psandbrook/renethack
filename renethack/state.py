@@ -3,7 +3,7 @@ from pygame import Surface
 
 import renethack
 from renethack.gui import Label, Button, WorldDisplay
-from renethack.entity_types import Hero
+from renethack.entity_types import Hero, Wait
 from renethack.util import validate
 
 LEVELS = 10
@@ -41,7 +41,6 @@ class MainMenu:
             self.exit_button
             ]
 
-    # return: 'State'|None
     def step(self, ms_per_step: float):
         """Step this main menu state."""
         validate(self.step, locals())
@@ -104,7 +103,6 @@ class MainGame:
 
         self.components = [self.world_display]
 
-    # return: 'State'|None
     def step(self, ms_per_step: float):
         """Step the game state."""
         validate(self.step, locals())
@@ -114,26 +112,29 @@ class MainGame:
             if event.type == pygame.QUIT:
                 return None
 
-            elif (event.type == pygame.KEYDOWN
-                    and event.key == pygame.K_ESCAPE):
+            elif event.type == pygame.KEYDOWN:
 
-                # If escape is pressed, return to the main menu:
-                return MainMenu()
+                if event.key == pygame.K_ESCAPE:
+                    # If escape is pressed, return to the main menu:
+                    return MainMenu()
+
+                elif event.key == pygame.K_SPACE:
+                    self.hero.actions.append(Wait())
 
             else:
 
                 for c in self.components:
                     c.check_event(event)
 
-                self.hero.check_event(event)
-
         for c in self.components:
             c.step(ms_per_step)
 
+        if self.world_display.pressed is not None:
+            self.hero.path_to(self.world, self.world_display.pressed)
+
         if self.hero.energy < 100 or len(self.hero.actions) > 0:
             # If we're not waiting for input, step the world:
-            self.world = renethack.world.step(self.world)
-            self.world_display.world = self.world
+            renethack.world.step(self.world)
 
         # If we are waiting for input, don't step the world.
 

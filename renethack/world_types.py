@@ -6,10 +6,18 @@ TileType = collections.namedtuple('TileType', 'name passable')
 # name: str
 # passable: bool
 
+class World:
+
+    def __init__(self, levels: list, hero: tuple) -> None:
+        validate(self.__init__, locals())
+
+        self.upper_levels = []
+        self.current_level = levels[0]
+        self.lower_levels = levels[1:]
+        self.hero = hero
+
 class Level:
 
-    # tiles: [[Tile]]
-    # entities: [(int, int)]
     def __init__(self, tiles: list, entities: list) -> None:
         validate(self.__init__, locals())
 
@@ -18,9 +26,6 @@ class Level:
 
 class Tile:
 
-    # type: TileType
-    # items: [Item]
-    # entity: Monster|Hero|None
     def __init__(self, type: TileType, items: list, entity) -> None:
         validate(self.__init__, locals())
 
@@ -30,7 +35,6 @@ class Tile:
 
 class ExistingEntityError(Exception):
 
-    # point: (int, int)
     def __init__(self, point: tuple) -> None:
         validate(self.__init__, locals())
 
@@ -41,7 +45,6 @@ class ExistingEntityError(Exception):
 
 class TileNotPassableError(Exception):
 
-    # point: (int, int)
     def __init__(self, point: tuple) -> None:
         validate(self.__init__, locals())
 
