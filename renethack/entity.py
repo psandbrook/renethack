@@ -23,7 +23,8 @@ def new_goblin() -> Monster:
         hit_points=3,
         defence=0,
         speed=50,
-        strength=2
+        strength=2,
+        open_doors=True
         )
 
 monster_fns = [new_goblin]

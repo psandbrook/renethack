@@ -11,6 +11,7 @@ from renethack.world_types import World
 from renethack.util import validate, get_maindir, raw_filename, clamp
 
 class Label:
+    """Fixed text that is always visible."""
 
     def __init__(
             self,
@@ -62,6 +63,7 @@ class Label:
             )
 
 class Button:
+    """Displays text in a box and detects click events."""
 
     def __init__(
             self,
@@ -159,6 +161,7 @@ class Button:
             )
 
 class WorldDisplay:
+    """Displays a `World` using a grid of rectangles."""
 
     def __init__(
             self,
@@ -198,15 +201,19 @@ class WorldDisplay:
 
             for file in os.listdir(icon_dir):
 
-                full_path = os.path.join(icon_dir, file)
-                name = raw_filename(file)
+                _, ext = os.path.splitext(file)
 
-                icon = pygame.transform.scale(
-                    pygame.image.load(full_path),
-                    (self.tile_length, self.tile_length)
-                    )
+                if ext == '.png':
 
-                yield name, icon
+                    full_path = os.path.join(icon_dir, file)
+                    name = raw_filename(file)
+
+                    icon = pygame.transform.scale(
+                        pygame.image.load(full_path),
+                        (self.tile_length, self.tile_length)
+                        )
+
+                    yield name, icon
 
         self.icons = dict(icon_entries())
         # Create a dictionary of names to `Surface` objects.
@@ -303,6 +310,9 @@ class WorldDisplay:
                     colourise(icon, (64, 64, 64))
 
                 surface.blit(icon, rect)
+
+class Status:
+    """Displays the hero's status."""
 
 def colourise(surface: Surface, rgb: tuple) -> Surface:
     """

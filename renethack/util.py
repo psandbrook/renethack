@@ -64,3 +64,23 @@ def clamp(value, min_, max_):
 
     else:
         return value
+
+def min_clamp(value, min_):
+    """Returns a value that is greater than or equal to `min_`."""
+
+    if value < min_:
+        return min_
+
+    else:
+        return value
+
+def iter_to_maybe(iterable):
+    """
+    Return the first element of `iterable`,
+    or `None` if it is empty.
+    """
+
+    for x in iterable:
+        return x
+
+    return None

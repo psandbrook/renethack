@@ -101,7 +101,33 @@ class MainGame:
             world=self.world
             )
 
-        self.components = [self.world_display]
+        self.name_label = Label(
+            pos=(0.1, 0.7),
+            height=0.03,
+            text=self.hero.name,
+            font_type='sans'
+            )
+
+        self.hit_points_label = Label(
+            pos=(0.1, 0.75),
+            height=0.03,
+            text='Hit Points: {0}/{0}'.format(self.hero.hit_points),
+            font_type='sans'
+            )
+
+        self.defence_label = Label(
+            pos=(0.1, 0.8),
+            height=0.03,
+            text='Defence: {}'.format(self.hero.defence),
+            font_type='sans'
+            )
+
+        self.components = [
+            self.world_display,
+            self.name_label,
+            self.hit_points_label,
+            self.defence_label
+            ]
 
     def step(self, ms_per_step: float):
         """Step the game state."""
@@ -124,19 +150,20 @@ class MainGame:
             else:
 
                 for c in self.components:
+                    # Pass on event to each component.
                     c.check_event(event)
 
         for c in self.components:
+            # Update each component.
             c.step(ms_per_step)
 
+        # Check if a tile has been clicked.
         if self.world_display.pressed is not None:
             self.hero.path_to(self.world, self.world_display.pressed)
 
         if self.hero.energy < 100 or len(self.hero.actions) > 0:
-            # If we're not waiting for input, step the world:
+            # Update the world if not waiting for input.
             renethack.world.step(self.world)
-
-        # If we are waiting for input, don't step the world.
 
         return self
 
