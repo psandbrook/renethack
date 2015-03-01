@@ -34,16 +34,19 @@ class Move:
         if target_tile.entity is not None:
 
             # Attack
-            target_tile.entity.hit_points -= min_clamp(
-                hero.strength - target_tile.entity.defence,
-                0
-                )
+
+            damage = min_clamp(hero.strength - target_tile.entity.defence, 0)
+            target_tile.entity.hit_points -= damage
+
+            hero.add_message('You hit the {} for {} damage!'.format(
+                target_tile.entity.name, damage))
 
             hero.actions = []
 
         else:
 
             if target_tile.type is CLOSED_DOOR:
+                hero.add_message('You open the door.')
                 target_tile.type = OPEN_DOOR
 
             # Move
@@ -84,10 +87,12 @@ class Use:
         if target_tile.entity is not None:
 
             # Attack
-            target_tile.entity.hit_points -= min_clamp(
-                hero.strength - target_tile.entity.defence,
-                0
-                )
+
+            damage = min_clamp(hero.strength - target_tile.entity.defence, 0)
+            target_tile.entity.hit_points -= damage
+
+            hero.add_message('You hit the {} for {} damage!'.format(
+                target_tile.entity.name, damage))
 
             hero.actions = []
 
@@ -109,6 +114,7 @@ class Use:
             renethack.world.remove_entity(world.current_level, world.hero)
             renethack.world.add_entity(world.current_level, world.hero, hero)
 
+            hero.add_message('You ascend the stairs.')
             hero.actions = []
 
         elif target_tile.type is DOWN_STAIRS:
@@ -124,7 +130,13 @@ class Use:
             renethack.world.remove_entity(world.current_level, world.hero)
             renethack.world.add_entity(world.current_level, world.hero, hero)
 
+            hero.add_message('You descend the stairs.')
             hero.actions = []
+
+        elif target_tile.type is OPEN_DOOR:
+
+            target_tile.type = CLOSED_DOOR
+            hero.add_message('You close the door.')
 
 class Wait:
     """Do nothing. Does not cost energy."""
@@ -172,8 +184,12 @@ class Monster:
         """
         validate(self.step, locals())
 
+        hero_x, hero_y = world.hero
+        hero = world.current_level.tiles[hero_x][hero_y].entity
+
         if self.hit_points <= 0:
             renethack.world.remove_entity(world.current_level, point)
+            hero.add_message('The {} dies!'.format(self.name))
             return
 
         if self.energy >= 100:
@@ -194,17 +210,25 @@ class Monster:
                         and (target_tile.type is not CLOSED_DOOR
                             or not self.open_doors))
                     or (target_tile.entity is not None
-                        and (target_x, target_y) != world.hero)):
+                        and target_tile.entity is not hero)):
+
+                # If nothing can be done, return immediately.
                 return
 
             self.energy -= 100
 
-            if (target_x, target_y) == world.hero:
+            if target_tile.entity is hero:
 
                 # Attack hero
-                target_tile.entity.hit_points -= min_clamp(
-                    self.strength - target_tile.entity.defence,
-                    0
+
+                damage = min_clamp(
+                    self.strength - target_tile.entity.defence, 0)
+
+                target_tile.entity.hit_points -= damage
+
+                target_tile.entity.add_message(
+                    'The {} hits you for {} damage!'.format(
+                        self.name, damage)
                     )
 
             else:
@@ -253,6 +277,7 @@ class Hero:
 
         self.energy = 0
         self.actions = []
+        self.messages = []
         self.icon_name = 'Hero'
 
     def path_to(self, world: World, point: tuple) -> None:
@@ -266,6 +291,7 @@ class Hero:
         tile = world.current_level.tiles[x][y]
 
         if not tile.type.passable and tile.type is not CLOSED_DOOR:
+            self.add_message('You cannot move there.')
             return
 
         elif world.hero == point:
@@ -275,7 +301,9 @@ class Hero:
         directions = find_path(world.hero, point, world.current_level)
         moves = [Move(d) for d in directions]
 
-        if tile.type is UP_STAIRS or tile.type is DOWN_STAIRS:
+        if (tile.type is UP_STAIRS
+                or tile.type is DOWN_STAIRS
+                or tile.type is OPEN_DOOR):
             self.actions = moves[:-1]
             self.actions.append(Use(directions[-1]))
 
@@ -284,6 +312,15 @@ class Hero:
 
     def wait(self) -> None:
         self.actions.append(Wait())
+
+    def add_message(self, msg: str) -> None:
+        validate(self.add_message, locals())
+        self.messages.append(msg)
+
+    def collect_messages(self) -> list:
+        messages = self.messages
+        self.messages = []
+        return messages
 
     def step(self, point: tuple, world: World) -> None:
         """Update this entity.

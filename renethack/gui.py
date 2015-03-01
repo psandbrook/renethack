@@ -1,9 +1,11 @@
 import os
+import textwrap
 from types import GeneratorType
 
 import pygame
-from pygame import Surface, PixelArray
+from pygame import Surface, PixelArray, Rect
 from pygame.event import EventType
+from pygame.font import Font
 
 import renethack
 from renethack.entity_types import Hero
@@ -28,7 +30,7 @@ class Label:
 
         self.pos = (surface_w * pos_x, surface_h * pos_y)
 
-        self.font = pygame.font.Font(
+        self.font = Font(
             pygame.font.match_font(font_type),
             int(surface_h * height)
             )
@@ -90,7 +92,7 @@ class Button:
         surface_w, surface_h = pygame.display.get_surface().get_size()
         pos_x, pos_y = pos
 
-        self.rect = pygame.Rect(
+        self.rect = Rect(
             surface_w * (pos_x - width / 2),
             surface_h * (pos_y - height / 2),
             surface_w * width,
@@ -100,7 +102,7 @@ class Button:
 
         self.text = text
 
-        self.font = pygame.font.Font(
+        self.font = Font(
             pygame.font.match_font('sans'),
             int(self.rect.height * 0.8)
             )
@@ -185,7 +187,7 @@ class WorldDisplay:
         surface_w, surface_h = pygame.display.get_surface().get_size()
         pos_x, pos_y = pos
 
-        self.rect = pygame.Rect(
+        self.rect = Rect(
             surface_w * (pos_x - width / 2),
             surface_h * (pos_y - height / 2),
             surface_w * width,
@@ -239,7 +241,7 @@ class WorldDisplay:
                 topleft_x = display_botleft_x + self.tile_length*x
                 topleft_y = display_botleft_y - self.tile_length * (y + 1)
 
-                yield pygame.Rect(
+                yield Rect(
                     topleft_x,
                     topleft_y,
                     self.tile_length,
@@ -327,23 +329,24 @@ class StatusDisplay:
     def __init__(
             self,
             pos: tuple,
-            height: float,
+            width: float,
             hero: Hero) -> None:
 
         validate(self.__init__, locals())
 
+        surface_w, surface_h = pygame.display.get_surface().get_size()
         pos_x, pos_y = pos
-        width = height*0.7
+        height = width*1.25
         top_pos = pos_y - height/2
         left_pos = pos_x - width/2
-        text_height = height*0.16
+        text_height = height*0.1
 
         labels = (
             Label(
                 pos=(left_pos, top_pos + height*x),
                 height=text_height,
                 text='',
-                font_type='sans',
+                font_type='mono',
                 alignment='left'
                 )
             for x in xrange(0.1, 1, 0.2)
@@ -400,12 +403,35 @@ class MessageDisplay:
 
         validate(self.__init__, locals())
 
+        surface_w, surface_h = pygame.display.get_surface().get_size()
         pos_x, pos_y = pos
         self.left_pos = pos_x - width/2
-        self.top_pos = pos_y - height/2
-        self.width = width
-        self.height = height
+        top_pos = pos_y - height/2
+
         self.messages = []
+        line_height = height*0.04
+        self.font_height = line_height*0.8
+
+        font = Font(
+            pygame.font.match_font('mono'),
+            int(surface_h * self.font_height)
+            )
+
+        font_px_width, _ = font.size('a')
+        self.chars_per_line = int(surface_w * width / font_px_width)
+        self.lines = int(surface_h * height / (line_height * surface_h))
+
+        self.y_positions = list(
+            xrange(
+                top_pos + line_height/2,
+                top_pos + line_height*self.lines,
+                line_height
+                )
+            )
+
+    def add_message(self, msg: str) -> None:
+        validate(self.add_message, locals())
+        self.messages.append(msg)
 
     def check_event(self, event: EventType) -> None:
         """Check `event` with this element."""
@@ -418,6 +444,27 @@ class MessageDisplay:
     def render(self, surface: Surface) -> None:
         """Render this element to the given surface."""
         validate(self.render, locals())
+
+        self.messages = [
+            str_
+            for msg in self.messages
+            for str_ in textwrap.wrap(msg, width=self.chars_per_line)
+            ]
+
+        if len(self.messages) > self.lines:
+            del self.messages[:len(self.messages) - self.lines + 1]
+
+        for msg, y_pos in zip(self.messages, self.y_positions):
+
+            label = Label(
+                pos=(self.left_pos, y_pos),
+                height=self.font_height,
+                text=msg,
+                font_type='mono',
+                alignment='left'
+                )
+
+            label.render(surface)
 
 def colourise(surface: Surface, rgb: tuple) -> Surface:
     """

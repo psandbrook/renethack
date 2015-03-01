@@ -104,13 +104,13 @@ class MainGame:
 
         self.status_display = StatusDisplay(
             pos=(0.1, 0.5),
-            height=0.25,
+            width=0.18,
             hero=self.hero
             )
 
         self.message_display = MessageDisplay(
             pos=(0.9, 0.5),
-            width=0.2,
+            width=0.18,
             height=1.0
             )
 
@@ -147,6 +147,9 @@ class MainGame:
         for c in self.components:
             # Update each component.
             c.step(ms_per_step)
+
+        for msg in self.hero.collect_messages():
+            self.message_display.add_message(msg)
 
         # Check if a tile has been clicked.
         if self.world_display.pressed is not None:

@@ -22,7 +22,7 @@ def make_world(levels: int, level_length: int, hero: Hero) -> World:
     centre = (level_length - 1) // 2
     # The centre of each level.
 
-    def make_level(place_down_stairs: bool) -> Level:
+    def make_level(up_stairs: bool, down_stairs: bool) -> Level:
         """Returns a randomly generated level as a `Level` object."""
         validate(make_level, locals())
 
@@ -61,7 +61,8 @@ def make_world(levels: int, level_length: int, hero: Hero) -> World:
             type_=FLOOR
             )
 
-        level.tiles[centre][centre] = new_tile(UP_STAIRS)
+        if up_stairs:
+            level.tiles[centre][centre] = new_tile(UP_STAIRS)
 
         # Keep creating rooms until there are
         # 20 contiguous rejections:
@@ -107,14 +108,16 @@ def make_world(levels: int, level_length: int, hero: Hero) -> World:
                 reject_count += 1
 
         # Place the downwards stairway:
-        if place_down_stairs:
+        if down_stairs:
             down_x, down_y = random.choice(get_tiles(level, FLOOR))
             level.tiles[down_x][down_y] = new_tile(DOWN_STAIRS)
 
         return level
 
     # Create a list of levels:
-    world = [make_level(True) for _ in range(levels - 1)] + [make_level(False)]
+    world = ([make_level(False, True)]
+        + [make_level(True, True) for _ in range(levels - 2)]
+        + [make_level(True, False)])
 
     # Add the hero at the centre point on the first level:
     add_entity(world[0], (centre, centre), hero)
