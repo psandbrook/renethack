@@ -26,11 +26,10 @@ class Level:
 
 class Tile:
 
-    def __init__(self, type: TileType, items: list, entity) -> None:
+    def __init__(self, type: TileType, entity) -> None:
         validate(self.__init__, locals())
 
         self.type = type
-        self.items = items
         self.entity = entity
 
 class ExistingEntityError(Exception):

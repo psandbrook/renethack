@@ -100,7 +100,12 @@ class Use:
             world.current_level = world.upper_levels[0]
             world.upper_levels = world.upper_levels[1:]
 
-            world.hero = (centre, centre)
+            down_stairs = renethack.world.get_tiles(
+                world.current_level,
+                DOWN_STAIRS
+                )
+
+            world.hero = down_stairs[0]
             renethack.world.remove_entity(world.current_level, world.hero)
             renethack.world.add_entity(world.current_level, world.hero, hero)
 
@@ -271,11 +276,14 @@ class Hero:
         moves = [Move(d) for d in directions]
 
         if tile.type is UP_STAIRS or tile.type is DOWN_STAIRS:
-            self.actions.extend(moves[:-1])
+            self.actions = moves[:-1]
             self.actions.append(Use(directions[-1]))
 
         else:
-            self.actions.extend(moves)
+            self.actions = moves
+
+    def wait(self) -> None:
+        self.actions.append(Wait())
 
     def step(self, point: tuple, world: World) -> None:
         """Update this entity.

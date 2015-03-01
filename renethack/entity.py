@@ -11,7 +11,7 @@ def rand_hero(name: str) -> Hero:
     return Hero(
         name=name,
         hit_points=random.randint(7, 10),
-        defence=random.randint(0, 2),
+        defence=random.randint(0, 1),
         speed=random.randint(50, 75),
         strength=random.randint(1, 3)
         )

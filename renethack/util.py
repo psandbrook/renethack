@@ -84,3 +84,10 @@ def iter_to_maybe(iterable):
         return x
 
     return None
+
+def xrange(start, stop, step):
+    """Similar to `range`, but works on any numeric type."""
+
+    while start < stop:
+        yield start
+        start += step

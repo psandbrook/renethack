@@ -8,7 +8,7 @@ from pygame.event import EventType
 import renethack
 from renethack.entity_types import Hero
 from renethack.world_types import World
-from renethack.util import validate, get_maindir, raw_filename, clamp
+from renethack.util import validate, get_maindir, raw_filename, clamp, xrange
 
 class Label:
     """Fixed text that is always visible."""
@@ -18,7 +18,8 @@ class Label:
             pos: tuple,
             height: float,
             text: str,
-            font_type: str) -> None:
+            font_type: str,
+            alignment: str) -> None:
 
         validate(self.__init__, locals())
 
@@ -34,6 +35,7 @@ class Label:
         # Create a font with the correct font type and height.
 
         self.text = text
+        self.alignment = alignment
 
     def check_event(self, event: EventType) -> None:
         """Check `event` with this element."""
@@ -53,14 +55,22 @@ class Label:
             (255, 255, 255)
             )
 
-        centre_xoffset = font_render.get_width() / 2
-        centre_yoffset = font_render.get_height() / 2
-        centre_x, centre_y = self.pos
+        x, y = self.pos
 
-        surface.blit(
-            font_render,
-            (centre_x - centre_xoffset, centre_y - centre_yoffset)
-            )
+        if self.alignment == 'centre':
+
+            x_offset = font_render.get_width() / 2
+            y_offset = font_render.get_height() / 2
+
+        elif self.alignment == 'left':
+
+            x_offset = 0
+            y_offset = font_render.get_height() / 2
+
+        else:
+            raise ValueError('invalid alignment of {}'.format(self.alignment))
+
+        surface.blit(font_render, (x - x_offset, y - y_offset))
 
 class Button:
     """Displays text in a box and detects click events."""
@@ -203,7 +213,7 @@ class WorldDisplay:
 
                 _, ext = os.path.splitext(file)
 
-                if ext == '.png':
+                if ext.lower() == '.png':
 
                     full_path = os.path.join(icon_dir, file)
                     name = raw_filename(file)
@@ -311,8 +321,103 @@ class WorldDisplay:
 
                 surface.blit(icon, rect)
 
-class Status:
+class StatusDisplay:
     """Displays the hero's status."""
+
+    def __init__(
+            self,
+            pos: tuple,
+            height: float,
+            hero: Hero) -> None:
+
+        validate(self.__init__, locals())
+
+        pos_x, pos_y = pos
+        width = height*0.7
+        top_pos = pos_y - height/2
+        left_pos = pos_x - width/2
+        text_height = height*0.16
+
+        labels = (
+            Label(
+                pos=(left_pos, top_pos + height*x),
+                height=text_height,
+                text='',
+                font_type='sans',
+                alignment='left'
+                )
+            for x in xrange(0.1, 1, 0.2)
+            )
+
+        self.name_label = next(labels)
+        self.hp_label = next(labels)
+        self.defence_label = next(labels)
+        self.speed_label = next(labels)
+        self.strength_label = next(labels)
+
+        self.components = [
+            self.name_label,
+            self.hp_label,
+            self.defence_label,
+            self.speed_label,
+            self.strength_label
+            ]
+
+        self.hero = hero
+
+    def check_event(self, event: EventType) -> None:
+        """Check `event` with this element."""
+        validate(self.check_event, locals())
+
+    def step(self, ms_per_step: float) -> None:
+        """Update this element."""
+        validate(self.step, locals())
+
+        self.name_label.text = self.hero.name
+
+        self.hp_label.text = 'Hit Points: {}/{}'.format(
+            self.hero.hit_points, self.hero.max_hit_points)
+
+        self.defence_label.text = 'Defence: {}'.format(self.hero.defence)
+        self.speed_label.text = 'Speed: {}'.format(self.hero.speed)
+        self.strength_label.text = 'Strength: {}'.format(self.hero.strength)
+
+    def render(self, surface: Surface) -> None:
+        """Render this element to the given surface."""
+        validate(self.render, locals())
+
+        for c in self.components:
+            c.render(surface)
+
+class MessageDisplay:
+    """Displays game messages."""
+
+    def __init__(
+            self,
+            pos: tuple,
+            width:float,
+            height: float) -> None:
+
+        validate(self.__init__, locals())
+
+        pos_x, pos_y = pos
+        self.left_pos = pos_x - width/2
+        self.top_pos = pos_y - height/2
+        self.width = width
+        self.height = height
+        self.messages = []
+
+    def check_event(self, event: EventType) -> None:
+        """Check `event` with this element."""
+        validate(self.check_event, locals())
+
+    def step(self, ms_per_step: float) -> None:
+        """Update this element."""
+        validate(self.step, locals())
+
+    def render(self, surface: Surface) -> None:
+        """Render this element to the given surface."""
+        validate(self.render, locals())
 
 def colourise(surface: Surface, rgb: tuple) -> Surface:
     """

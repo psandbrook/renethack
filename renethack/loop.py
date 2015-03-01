@@ -21,7 +21,7 @@ def start() -> None:
     """
 
     pygame.init()
-    pygame.key.set_repeat(1, 10)
+    pygame.key.set_repeat(500, 10)
 
     default_config = Config(
         fullscreen=False,

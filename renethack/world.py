@@ -127,7 +127,6 @@ def new_tile(type_: TileType) -> Tile:
 
     return Tile(
         type_,
-        items=[],
         entity=None
         )
 

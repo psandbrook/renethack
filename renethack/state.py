@@ -2,7 +2,7 @@ import pygame
 from pygame import Surface
 
 import renethack
-from renethack.gui import Label, Button, WorldDisplay
+from renethack.gui import Label, Button, WorldDisplay, StatusDisplay, MessageDisplay
 from renethack.entity_types import Hero, Wait
 from renethack.util import validate
 
@@ -18,7 +18,8 @@ class MainMenu:
             pos=(0.5, 0.1),
             height=0.2,
             text='ReNetHack',
-            font_type='serif'
+            font_type='serif',
+            alignment='centre'
             )
 
         self.newgame_button = Button(
@@ -101,32 +102,22 @@ class MainGame:
             world=self.world
             )
 
-        self.name_label = Label(
-            pos=(0.1, 0.7),
-            height=0.03,
-            text=self.hero.name,
-            font_type='sans'
+        self.status_display = StatusDisplay(
+            pos=(0.1, 0.5),
+            height=0.25,
+            hero=self.hero
             )
 
-        self.hit_points_label = Label(
-            pos=(0.1, 0.75),
-            height=0.03,
-            text='Hit Points: {0}/{0}'.format(self.hero.hit_points),
-            font_type='sans'
-            )
-
-        self.defence_label = Label(
-            pos=(0.1, 0.8),
-            height=0.03,
-            text='Defence: {}'.format(self.hero.defence),
-            font_type='sans'
+        self.message_display = MessageDisplay(
+            pos=(0.9, 0.5),
+            width=0.2,
+            height=1.0
             )
 
         self.components = [
             self.world_display,
-            self.name_label,
-            self.hit_points_label,
-            self.defence_label
+            self.status_display,
+            self.message_display
             ]
 
     def step(self, ms_per_step: float):
@@ -145,7 +136,7 @@ class MainGame:
                     return MainMenu()
 
                 elif event.key == pygame.K_SPACE:
-                    self.hero.actions.append(Wait())
+                    self.hero.wait()
 
             else:
 
