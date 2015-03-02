@@ -1,4 +1,5 @@
 import os
+import pickle
 
 import pygame
 
@@ -23,13 +24,16 @@ def start() -> None:
     pygame.init()
     pygame.key.set_repeat(500, 10)
 
-    default_config = Config(
-        fullscreen=False,
-        resolution=(1366, 768)
-        )
+    default_config = Config(fullscreen=False, resolution=(1366, 768))
     # The default config to use if the config file does not exist.
 
-    read_config = renethack.config.read_from(config_path, default_config)
+    if not os.path.exists(config_path):
+        with open(path, mode='wb') as file:
+            pickle.dump(file)
+
+    with open(path, mode='rb') as file:
+        read_config = pickle.load(file)
+
     surface = renethack.config.apply(read_config)
 
     def main_loop() -> None:

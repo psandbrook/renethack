@@ -41,8 +41,6 @@ class Move:
             hero.add_message('You hit the {} for {} damage!'.format(
                 target_tile.entity.name, damage))
 
-            hero.actions = []
-
         else:
 
             if target_tile.type is CLOSED_DOOR:
@@ -94,8 +92,6 @@ class Use:
             hero.add_message('You hit the {} for {} damage!'.format(
                 target_tile.entity.name, damage))
 
-            hero.actions = []
-
         elif target_tile.type is UP_STAIRS:
 
             # Go to upper level
@@ -106,16 +102,13 @@ class Use:
             world.upper_levels = world.upper_levels[1:]
 
             down_stairs = renethack.world.get_tiles(
-                world.current_level,
-                DOWN_STAIRS
-                )
+                world.current_level, DOWN_STAIRS)
 
             world.hero = down_stairs[0]
             renethack.world.remove_entity(world.current_level, world.hero)
             renethack.world.add_entity(world.current_level, world.hero, hero)
 
             hero.add_message('You ascend the stairs.')
-            hero.actions = []
 
         elif target_tile.type is DOWN_STAIRS:
 
@@ -131,10 +124,8 @@ class Use:
             renethack.world.add_entity(world.current_level, world.hero, hero)
 
             hero.add_message('You descend the stairs.')
-            hero.actions = []
 
         elif target_tile.type is OPEN_DOOR:
-
             target_tile.type = CLOSED_DOOR
             hero.add_message('You close the door.')
 
@@ -188,8 +179,13 @@ class Monster:
         hero = world.current_level.tiles[hero_x][hero_y].entity
 
         if self.hit_points <= 0:
+
             renethack.world.remove_entity(world.current_level, point)
+
+            hero.experience += 1
+            hero.score += 10
             hero.add_message('The {} dies!'.format(self.name))
+
             return
 
         if self.energy >= 100:
@@ -221,15 +217,18 @@ class Monster:
 
                 # Attack hero
 
-                damage = min_clamp(
-                    self.strength - target_tile.entity.defence, 0)
+                damage = min_clamp(self.strength - hero.defence, 0)
+                hero.hit_points -= damage
 
-                target_tile.entity.hit_points -= damage
+                hero.add_message('The {} hits you for {} damage!'.format(
+                    self.name, damage))
 
-                target_tile.entity.add_message(
-                    'The {} hits you for {} damage!'.format(
-                        self.name, damage)
-                    )
+                if hero.hit_points <= 0:
+
+                    renethack.world.remove_entity(
+                        world.current_level, world.hero)
+
+                    hero.add_message('You have died.')
 
             else:
 
@@ -275,7 +274,11 @@ class Hero:
         self.speed = speed
         self.strength = strength
 
+        self.level = 1
+        self.experience = 0
+        self.score = 0
         self.energy = 0
+        self.hp_counter = 0
         self.actions = []
         self.messages = []
         self.icon_name = 'Hero'
@@ -295,7 +298,7 @@ class Hero:
             return
 
         elif world.hero == point:
-            self.actions.append(Wait())
+            self.actions = [Wait()]
             return
 
         directions = find_path(world.hero, point, world.current_level)
@@ -328,6 +331,30 @@ class Hero:
         May modify values within `world`.
         """
         validate(self.step, locals())
+
+        if self.experience >= 10:
+
+            self.experience = 0
+            self.level += 1
+            self.score += 100
+            self.add_message('Welcome to level {}.'.format(self.level))
+
+            self.max_hit_points += 1
+            self.defence += 1
+            self.speed += 10
+            self.strength += 1
+
+        if self.hit_points < self.max_hit_points:
+
+            if self.hp_counter >= 10:
+                self.hp_counter = 0
+                self.hit_points += 1
+
+            else:
+                self.hp_counter += 1
+
+        else:
+            self.hp_counter = 0
 
         if self.energy >= 100: 
 

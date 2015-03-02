@@ -4,7 +4,7 @@ from pygame import Surface
 import renethack
 from renethack.gui import Label, Button, WorldDisplay, StatusDisplay, MessageDisplay
 from renethack.entity_types import Hero, Wait
-from renethack.util import validate
+from renethack.util import validate, xrange
 
 LEVELS = 10
 LEVEL_LENGTH = 30
@@ -13,6 +13,8 @@ class MainMenu:
 
     def __init__(self) -> None:
         """Initialise the main menu to the default state."""
+
+        button_y_pos = xrange(0.28, 1, 0.16)
 
         self.title_label = Label(
             pos=(0.5, 0.1),
@@ -23,22 +25,46 @@ class MainMenu:
             )
 
         self.newgame_button = Button(
-            pos=(0.5, 0.3),
+            pos=(0.5, next(button_y_pos)),
             width=0.4,
-            height=0.1,
+            height=0.16,
             text='New Game'
             )
 
-        self.exit_button = Button(
-            pos=(0.5, 0.5),
+        self.instructions_button = Button(
+            pos=(0.5, next(button_y_pos)),
             width=0.4,
-            height=0.1,
+            height=0.16,
+            text='How To Play'
+            )
+
+        self.scores_button = Button(
+            pos=(0.5, next(button_y_pos)),
+            width=0.4,
+            height=0.16,
+            text='High Scores'
+            )
+
+        self.options_button = Button(
+            pos=(0.5, next(button_y_pos)),
+            width=0.4,
+            height=0.16,
+            text='Options'
+            )
+
+        self.exit_button = Button(
+            pos=(0.5, next(button_y_pos)),
+            width=0.4,
+            height=0.16,
             text='Exit'
             )
 
         self.components = [
             self.title_label,
             self.newgame_button,
+            self.instructions_button,
+            self.scores_button,
+            self.options_button,
             self.exit_button
             ]
 
@@ -66,8 +92,19 @@ class MainMenu:
 
         if self.exit_button.pressed:
             return None
-        if self.newgame_button.pressed:
-            return MainGame()
+
+        elif self.newgame_button.pressed:
+            return NewGame()
+
+        elif self.instructions_button.pressed:
+            return HowToPlay()
+
+        elif self.scores_button.pressed:
+            return HighScores()
+
+        elif self.options_button.pressed:
+            return Options()
+
         else:
             # If nothing has happened, keep this main menu:
             return self
@@ -82,12 +119,62 @@ class MainMenu:
         for c in self.components:
             c.render(surface)
 
-class MainGame:
+class NewGame:
 
     def __init__(self) -> None:
-        """Initialise this object to its default state."""
+        """Initialise this state."""
+        validate(self.__init__, locals())
 
-        self.hero = renethack.entity.rand_hero('Hero')
+        self.enter_label = Label(
+            pos=(0.5, 0.2),
+            height=0.1,
+            text='Enter name:',
+            font_type='sans',
+            alignment='centre'
+            )
+
+        self.text_box = TextBox(pos=(0.5, 0.5), height=0.3)
+        self.components = [self.enter_label, self.text_box]
+
+    def step(self, ms_per_step: float):
+        """Update this state."""
+        validate(self.step, locals())
+
+        for event in pygame.event.get():
+
+            if event.type == pygame.QUIT:
+                return None
+
+            elif event.type == pygame.KEYDOWN:
+
+                if event.key == pygame.K_RETURN:
+                    return MainGame(self.text_box.get_text())
+
+            else:
+
+                for c in self.components:
+                    c.check_event(event)
+
+        for c in self.components:
+            c.step(ms_per_step)
+
+        return self
+
+    def render(self, surface: Surface) -> None:
+        """Render this state to the given surface."""
+        validate(self.render, locals())
+
+        surface.fill((0, 0, 0))
+        for c in self.components:
+            c.render(surface)
+
+class MainGame:
+
+    def __init__(self, name: str) -> None:
+        """Initialise this object to its default state."""
+        validate(self.__init__, locals())
+
+        self.hero = renethack.entity.rand_hero(name)
 
         self.world = renethack.world.make_world(
             levels=LEVELS,
@@ -108,6 +195,13 @@ class MainGame:
             hero=self.hero
             )
 
+        self.exit_button = Button(
+            pos=(0.1, 0.1),
+            width=0.2,
+            height=0.1,
+            text='Exit'
+            )
+
         self.message_display = MessageDisplay(
             pos=(0.9, 0.5),
             width=0.18,
@@ -116,6 +210,7 @@ class MainGame:
 
         self.components = [
             self.world_display,
+            self.exit_button,
             self.status_display,
             self.message_display
             ]
@@ -131,11 +226,7 @@ class MainGame:
 
             elif event.type == pygame.KEYDOWN:
 
-                if event.key == pygame.K_ESCAPE:
-                    # If escape is pressed, return to the main menu:
-                    return MainMenu()
-
-                elif event.key == pygame.K_SPACE:
+                if event.key == pygame.K_SPACE:
                     self.hero.wait()
 
             else:
@@ -148,21 +239,128 @@ class MainGame:
             # Update each component.
             c.step(ms_per_step)
 
+        if self.exit_button.pressed:
+            return MainMenu()
+
         for msg in self.hero.collect_messages():
             self.message_display.add_message(msg)
 
-        # Check if a tile has been clicked.
-        if self.world_display.pressed is not None:
-            self.hero.path_to(self.world, self.world_display.pressed)
+        if self.hero.hit_points > 0:
 
-        if self.hero.energy < 100 or len(self.hero.actions) > 0:
-            # Update the world if not waiting for input.
-            renethack.world.step(self.world)
+            # Check if a tile has been clicked.
+            if self.world_display.pressed is not None:
+                self.hero.path_to(self.world, self.world_display.pressed)
+
+            if self.hero.energy < 100 or len(self.hero.actions) > 0:
+                # Update the world if not waiting for input.
+                renethack.world.step(self.world)
 
         return self
 
     def render(self, surface: Surface) -> None:
         """Render the current game state."""
+        validate(self.render, locals())
+
+        surface.fill((0, 0, 0))
+        for c in self.components:
+            c.render(surface)
+
+class HowToPlay:
+
+    def __init__(self) -> None:
+        """Initialise this state."""
+
+        self.components = []
+
+    def step(self, ms_per_step: float):
+        """Update this state."""
+        validate(self.step, locals())
+
+        for event in pygame.event.get():
+
+            if event.type == pygame.QUIT:
+                return None
+
+            else:
+
+                for c in self.components:
+                    c.check_event(event)
+
+        for c in self.components:
+            c.step(ms_per_step)
+
+        return self
+
+    def render(self, surface: Surface) -> None:
+        """Render this state to the given surface."""
+        validate(self.render, locals())
+
+        surface.fill((0, 0, 0))
+        for c in self.components:
+            c.render(surface)
+
+class HighScores:
+
+    def __init__(self) -> None:
+        """Initialise this state."""
+
+        self.components = []
+
+    def step(self, ms_per_step: float):
+        """Update this state."""
+        validate(self.step, locals())
+
+        for event in pygame.event.get():
+
+            if event.type == pygame.QUIT:
+                return None
+
+            else:
+
+                for c in self.components:
+                    c.check_event(event)
+
+        for c in self.components:
+            c.step(ms_per_step)
+
+        return self
+
+    def render(self, surface: Surface) -> None:
+        """Render this state to the given surface."""
+        validate(self.render, locals())
+
+        surface.fill((0, 0, 0))
+        for c in self.components:
+            c.render(surface)
+
+class Options:
+
+    def __init__(self) -> None:
+        """Initialise this state."""
+
+        self.components = []
+
+    def step(self, ms_per_step: float):
+        """Update this state."""
+        validate(self.step, locals())
+
+        for event in pygame.event.get():
+
+            if event.type == pygame.QUIT:
+                return None
+
+            else:
+
+                for c in self.components:
+                    c.check_event(event)
+
+        for c in self.components:
+            c.step(ms_per_step)
+
+        return self
+
+    def render(self, surface: Surface) -> None:
+        """Render this state to the given surface."""
         validate(self.render, locals())
 
         surface.fill((0, 0, 0))

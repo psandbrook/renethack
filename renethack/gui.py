@@ -172,6 +172,62 @@ class Button:
             (centre_x - centre_xoffset, centre_y - centre_yoffset)
             )
 
+class TextBox:
+    """Displays text in a box that the user has input."""
+
+    def __init__(
+            self,
+            pos: tuple,
+            height: float) -> None:
+
+        validate(self.__init__, locals())
+
+        surface_w, surface_h = pygame.display.get_surface().get_size()
+        pos_x, pos_y = pos
+        width = height*1.5
+        left_pos = surface_w * (pos_x - width/2)
+
+        self.underline_rect = Rect(
+            surface_w * left_pos,
+            surface_h * (left_pos - height*0.02),
+            surface_w * width,
+            surface_h * height * 0.05
+            )
+
+        self.label = Label(
+            pos=pos,
+            height=height*0.8,
+            text='',
+            font_type='sans',
+            alignment='centre'
+            )
+
+    def get_text(self) -> str:
+        return self.label.text
+
+    def check_event(self, event: EventType) -> None:
+        """Check `event` with this element."""
+        validate(self.check_event, locals())
+
+        if event.type == pygame.KEYDOWN:
+
+            if event.key == pygame.K_BACKSPACE:
+                self.label.text = self.label.text[:-1]
+
+            else:
+                self.label.text += event.unicode
+
+    def step(self, ms_per_step: float) -> None:
+        """Update this element."""
+        validate(self.step, locals())
+
+    def render(self, surface: Surface) -> None:
+        """Render this label to the given surface."""
+        validate(self.render, locals())
+
+        surface.fill((255, 255, 255), self.underline_rect)
+        self.label.render(surface)
+
 class WorldDisplay:
     """Displays a `World` using a grid of rectangles."""
 
@@ -349,10 +405,12 @@ class StatusDisplay:
                 font_type='mono',
                 alignment='left'
                 )
-            for x in xrange(0.1, 1, 0.2)
+            for x in xrange(1/14, 1, 1/7)
             )
 
         self.name_label = next(labels)
+        self.score_label = next(labels)
+        self.level_label = next(labels)
         self.hp_label = next(labels)
         self.defence_label = next(labels)
         self.speed_label = next(labels)
@@ -360,6 +418,8 @@ class StatusDisplay:
 
         self.components = [
             self.name_label,
+            self.score_label,
+            self.level_label,
             self.hp_label,
             self.defence_label,
             self.speed_label,
@@ -377,6 +437,8 @@ class StatusDisplay:
         validate(self.step, locals())
 
         self.name_label.text = self.hero.name
+        self.score_label.text = 'Score: {}'.format(self.hero.score)
+        self.level_label.text = 'Level {}'.format(self.hero.level)
 
         self.hp_label.text = 'Hit Points: {}/{}'.format(
             self.hero.hit_points, self.hero.max_hit_points)
@@ -419,7 +481,7 @@ class MessageDisplay:
 
         font_px_width, _ = font.size('a')
         self.chars_per_line = int(surface_w * width / font_px_width)
-        self.lines = int(surface_h * height / (line_height * surface_h))
+        self.lines = int(surface_h * height / (surface_h * line_height))
 
         self.y_positions = list(
             xrange(
