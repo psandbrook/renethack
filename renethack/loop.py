@@ -28,10 +28,10 @@ def start() -> None:
     # The default config to use if the config file does not exist.
 
     if not os.path.exists(config_path):
-        with open(path, mode='wb') as file:
-            pickle.dump(file)
+        with open(config_path, mode='wb') as file:
+            pickle.dump(default_config, file)
 
-    with open(path, mode='rb') as file:
+    with open(config_path, mode='rb') as file:
         read_config = pickle.load(file)
 
     surface = renethack.config.apply(read_config)

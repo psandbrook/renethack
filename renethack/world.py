@@ -516,7 +516,7 @@ def remove_entity(level: Level, point: tuple) -> None:
 
     x, y = point
     level.tiles[x][y].entity = None
-    level.entities = [None if p == point else p for p in level.entities]
+    level.entities[level.entities.index(point)] = None
 
 def step(world: World):
     """Update `world` by one step.
@@ -543,6 +543,8 @@ def step(world: World):
 
             add_entity(world.current_level, (x, y), monster_fn(world))
 
+    updated_entities = []
+
     # Update each entity on the current level:
     for entity_point in world.current_level.entities:
 
@@ -552,12 +554,22 @@ def step(world: World):
 
         x, y = entity_point
         entity = world.current_level.tiles[x][y].entity
-        old_world_len = len(world.upper_levels)
 
+        if entity in updated_entities:
+            continue
+
+        updated_entities.append(entity)
+        old_world_len = len(world.upper_levels)
         entity.step(entity_point, world)
+
+        hero_x, hero_y = world.hero
+        hero = world.current_level.tiles[hero_x][hero_y].entity
 
         if old_world_len != len(world.upper_levels):
             # Return immediately if the world has changed.
+            return
+
+        elif hero is None:
             return
 
     # Clean up removed entities:

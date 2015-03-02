@@ -184,12 +184,13 @@ class TextBox:
 
         surface_w, surface_h = pygame.display.get_surface().get_size()
         pos_x, pos_y = pos
-        width = height*1.5
-        left_pos = surface_w * (pos_x - width/2)
+        width = height*5
+        left_pos = pos_x - width/2
+        top_pos = pos_y - height/2
 
         self.underline_rect = Rect(
             surface_w * left_pos,
-            surface_h * (left_pos - height*0.02),
+            surface_h * (top_pos + height*1.2),
             surface_w * width,
             surface_h * height * 0.05
             )

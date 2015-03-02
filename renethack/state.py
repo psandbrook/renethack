@@ -2,7 +2,7 @@ import pygame
 from pygame import Surface
 
 import renethack
-from renethack.gui import Label, Button, WorldDisplay, StatusDisplay, MessageDisplay
+from renethack.gui import Label, Button, TextBox, WorldDisplay, StatusDisplay, MessageDisplay
 from renethack.entity_types import Hero, Wait
 from renethack.util import validate, xrange
 
@@ -27,35 +27,35 @@ class MainMenu:
         self.newgame_button = Button(
             pos=(0.5, next(button_y_pos)),
             width=0.4,
-            height=0.16,
+            height=0.1,
             text='New Game'
             )
 
         self.instructions_button = Button(
             pos=(0.5, next(button_y_pos)),
             width=0.4,
-            height=0.16,
+            height=0.1,
             text='How To Play'
             )
 
         self.scores_button = Button(
             pos=(0.5, next(button_y_pos)),
             width=0.4,
-            height=0.16,
+            height=0.1,
             text='High Scores'
             )
 
         self.options_button = Button(
             pos=(0.5, next(button_y_pos)),
             width=0.4,
-            height=0.16,
+            height=0.1,
             text='Options'
             )
 
         self.exit_button = Button(
             pos=(0.5, next(button_y_pos)),
             width=0.4,
-            height=0.16,
+            height=0.1,
             text='Exit'
             )
 
@@ -129,11 +129,11 @@ class NewGame:
             pos=(0.5, 0.2),
             height=0.1,
             text='Enter name:',
-            font_type='sans',
+            font_type='serif',
             alignment='centre'
             )
 
-        self.text_box = TextBox(pos=(0.5, 0.5), height=0.3)
+        self.text_box = TextBox(pos=(0.5, 0.5), height=0.1)
         self.components = [self.enter_label, self.text_box]
 
     def step(self, ms_per_step: float):
@@ -150,10 +150,11 @@ class NewGame:
                 if event.key == pygame.K_RETURN:
                     return MainGame(self.text_box.get_text())
 
-            else:
+                elif event.key == pygame.K_ESCAPE:
+                    return MainMenu()
 
-                for c in self.components:
-                    c.check_event(event)
+            for c in self.components:
+                c.check_event(event)
 
         for c in self.components:
             c.step(ms_per_step)
@@ -197,8 +198,8 @@ class MainGame:
 
         self.exit_button = Button(
             pos=(0.1, 0.1),
-            width=0.2,
-            height=0.1,
+            width=0.16,
+            height=0.08,
             text='Exit'
             )
 
