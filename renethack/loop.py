@@ -34,10 +34,9 @@ def start() -> None:
     with open(config_path, mode='rb') as file:
         read_config = pickle.load(file)
 
-    surface = renethack.config.apply(read_config)
-
     def main_loop() -> None:
 
+        surface = renethack.config.apply(read_config)
         state = MainMenu()
 
         elapsed = 0.0
@@ -55,14 +54,27 @@ def start() -> None:
             lag += elapsed
             
             while lag >= MS_PER_STEP:
+
                 # While there's still a step's worth of time to be
                 # processed, update the state and lag:
                 state = state.step(MS_PER_STEP)
                 lag -= MS_PER_STEP
 
                 if state is None:
-                    # The state returns `None` if it has exited.
+
+                    # The state has exited, so stop the loop:
                     return
+
+                elif isinstance(state, tuple):
+
+                    # The state is requesting a config change.
+                    new_state, new_config = state
+                    state = new_state
+
+                    with open(config_path, mode='wb') as file:
+                        pickle.dump(new_config, file)
+
+                    surface = renethack.config.apply(new_config)
 
             state.render(surface)
             pygame.display.flip()

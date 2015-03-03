@@ -1,13 +1,18 @@
+import os
+import pickle
+
 import pygame
 from pygame import Surface
 
 import renethack
-from renethack.gui import Label, Button, TextBox, WorldDisplay, StatusDisplay, MessageDisplay
-from renethack.entity_types import Hero, Wait
-from renethack.util import validate, xrange
+from renethack.gui import Label, Button, TextBox, WorldDisplay, StatusDisplay, MessageDisplay, ScoreDisplay
+from renethack.entity_types import Hero, Score
+from renethack.util import validate, xrange, get_maindir
 
 LEVELS = 10
 LEVEL_LENGTH = 30
+
+scores_path = os.path.join(get_maindir(), 'scores.dat')
 
 class MainMenu:
 
@@ -15,14 +20,6 @@ class MainMenu:
         """Initialise the main menu to the default state."""
 
         button_y_pos = xrange(0.28, 1, 0.16)
-
-        self.title_label = Label(
-            pos=(0.5, 0.1),
-            height=0.2,
-            text='ReNetHack',
-            font_type='serif',
-            alignment='centre'
-            )
 
         self.newgame_button = Button(
             pos=(0.5, next(button_y_pos)),
@@ -60,13 +57,22 @@ class MainMenu:
             )
 
         self.components = [
-            self.title_label,
             self.newgame_button,
             self.instructions_button,
             self.scores_button,
             self.options_button,
             self.exit_button
             ]
+
+        self.components.append(
+            Label(
+                pos=(0.5, 0.1),
+                height=0.2,
+                text='ReNetHack',
+                font_type='serif',
+                alignment='centre'
+                )
+            )
 
     def step(self, ms_per_step: float):
         """Step this main menu state."""
@@ -125,16 +131,18 @@ class NewGame:
         """Initialise this state."""
         validate(self.__init__, locals())
 
-        self.enter_label = Label(
-            pos=(0.5, 0.2),
-            height=0.1,
-            text='Enter name:',
-            font_type='serif',
-            alignment='centre'
-            )
-
         self.text_box = TextBox(pos=(0.5, 0.5), height=0.1)
-        self.components = [self.enter_label, self.text_box]
+        self.components = [self.text_box]
+
+        self.components.append(
+            Label(
+                pos=(0.5, 0.2),
+                height=0.1,
+                text='Enter name:',
+                font_type='serif',
+                alignment='centre'
+                )
+            )
 
     def step(self, ms_per_step: float):
         """Update this state."""
@@ -175,6 +183,7 @@ class MainGame:
         """Initialise this object to its default state."""
         validate(self.__init__, locals())
 
+        self.score_saved = False
         self.hero = renethack.entity.rand_hero(name)
 
         self.world = renethack.world.make_world(
@@ -188,12 +197,6 @@ class MainGame:
             width=0.6,
             height=1.0,
             world=self.world
-            )
-
-        self.status_display = StatusDisplay(
-            pos=(0.1, 0.5),
-            width=0.18,
-            hero=self.hero
             )
 
         self.exit_button = Button(
@@ -212,9 +215,16 @@ class MainGame:
         self.components = [
             self.world_display,
             self.exit_button,
-            self.status_display,
             self.message_display
             ]
+
+        self.components.append(
+            StatusDisplay(
+                pos=(0.1, 0.5),
+                width=0.18,
+                hero=self.hero
+                )
+            )
 
     def step(self, ms_per_step: float):
         """Step the game state."""
@@ -241,6 +251,10 @@ class MainGame:
             c.step(ms_per_step)
 
         if self.exit_button.pressed:
+
+            if not self.score_saved:
+                self.save_score()
+
             return MainMenu()
 
         for msg in self.hero.collect_messages():
@@ -256,7 +270,30 @@ class MainGame:
                 # Update the world if not waiting for input.
                 renethack.world.step(self.world)
 
+        elif not self.score_saved:
+            # The player character has died.
+            self.save_score()
+
         return self
+
+    def save_score(self) -> None:
+
+        self.score_saved = True
+        scores = load_scores()
+
+        scores.append(
+            Score(
+                name=self.hero.name,
+                level=self.hero.level,
+                score=self.hero.score
+                )
+            )
+
+        scores.sort(key=lambda s: s.score, reverse=True)
+        scores = scores[:3]
+
+        with open(scores_path, 'wb') as file:
+            pickle.dump(scores, file)
 
     def render(self, surface: Surface) -> None:
         """Render the current game state."""
@@ -305,7 +342,66 @@ class HighScores:
     def __init__(self) -> None:
         """Initialise this state."""
 
-        self.components = []
+        self.exit_button = Button(
+            pos=(0.1, 0.1),
+            width=0.16,
+            height=0.08,
+            text='Exit'
+            )
+
+        self.components = [self.exit_button]
+        number_y_pos = list(xrange(0.35, 1, 0.2))
+
+        self.components.append(
+            Label(
+                pos=(0.5, 0.1),
+                height=0.15,
+                text='High Scores',
+                font_type='serif',
+                alignment='centre'
+                )
+            )
+
+        self.components.append(
+            Label(
+                pos=(0.3, number_y_pos[0]),
+                height=0.15,
+                text='1',
+                font_type='sans',
+                alignment='centre'
+                )
+            )
+
+        self.components.append(
+            Label(
+                pos=(0.3, number_y_pos[1]),
+                height=0.15,
+                text='2',
+                font_type='sans',
+                alignment='centre'
+                )
+            )
+
+        self.components.append(
+            Label(
+                pos=(0.3, number_y_pos[2]),
+                height=0.15,
+                text='3',
+                font_type='sans',
+                alignment='centre'
+                )
+            )
+
+        scores = load_scores()
+
+        for i in range(len(scores)):
+            self.components.append(
+                ScoreDisplay(
+                    pos=(0.4, number_y_pos[i]),
+                    height=0.15,
+                    score=scores[i]
+                    )
+                )
 
     def step(self, ms_per_step: float):
         """Update this state."""
@@ -323,6 +419,9 @@ class HighScores:
 
         for c in self.components:
             c.step(ms_per_step)
+
+        if self.exit_button.pressed:
+            return MainMenu()
 
         return self
 
@@ -339,7 +438,25 @@ class Options:
     def __init__(self) -> None:
         """Initialise this state."""
 
-        self.components = []
+        self.title_label = Label(
+            pos=(0.5, 0.1),
+            height=0.15,
+            text='Options',
+            font_type='serif',
+            alignment='centre'
+            )
+
+        self.exit_button = Button(
+            pos=(0.1, 0.1),
+            width=0.16,
+            height=0.08,
+            text='Exit'
+            )
+
+        self.components = [
+            self.title_label,
+            self.exit_button
+            ]
 
     def step(self, ms_per_step: float):
         """Update this state."""
@@ -358,6 +475,9 @@ class Options:
         for c in self.components:
             c.step(ms_per_step)
 
+        if self.exit_button.pressed:
+            return MainMenu()
+
         return self
 
     def render(self, surface: Surface) -> None:
@@ -367,3 +487,12 @@ class Options:
         surface.fill((0, 0, 0))
         for c in self.components:
             c.render(surface)
+
+def load_scores() -> list:
+
+    if os.path.exists(scores_path):
+        with open(scores_path, 'rb') as file:
+            return pickle.load(file)
+
+    else:
+        return []

@@ -8,7 +8,7 @@ from pygame.event import EventType
 from pygame.font import Font
 
 import renethack
-from renethack.entity_types import Hero
+from renethack.entity_types import Hero, Score
 from renethack.world_types import World
 from renethack.util import validate, get_maindir, raw_filename, clamp, xrange
 
@@ -528,6 +528,67 @@ class MessageDisplay:
                 )
 
             label.render(surface)
+
+class ScoreDisplay:
+    """Displays a character's score."""
+
+    def __init__(
+            self,
+            pos: tuple,
+            height: float,
+            score: Score) -> None:
+
+        validate(self.__init__, locals())
+
+        pos_x, pos_y = pos
+        line_height = height/3
+        text_height = line_height*0.8
+        self.components = []
+
+        self.components.append(
+            Label(
+                pos=(pos_x, pos_y - line_height),
+                height=text_height,
+                text='Name: {}'.format(score.name),
+                font_type='sans',
+                alignment='left'
+                )
+            )
+
+        self.components.append(
+            Label(
+                pos=pos,
+                height=text_height,
+                text='Level: {}'.format(score.level),
+                font_type='sans',
+                alignment='left'
+                )
+            )
+
+        self.components.append(
+            Label(
+                pos=(pos_x, pos_y + line_height),
+                height=text_height,
+                text='Score: {}'.format(score.score),
+                font_type='sans',
+                alignment='left'
+                )
+            )
+
+    def check_event(self, event: EventType) -> None:
+        """Check `event` with this element."""
+        validate(self.check_event, locals())
+
+    def step(self, ms_per_step: float) -> None:
+        """Update this element."""
+        validate(self.step, locals())
+
+    def render(self, surface: Surface) -> None:
+        """Render this label to the given surface."""
+        validate(self.render, locals())
+
+        for c in self.components:
+            c.render(surface)
 
 def colourise(surface: Surface, rgb: tuple) -> Surface:
     """

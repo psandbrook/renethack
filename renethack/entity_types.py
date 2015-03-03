@@ -7,6 +7,8 @@ import renethack
 from renethack.world_types import World, Level
 from renethack.util import validate, iter_to_maybe, min_clamp
 
+Score = collections.namedtuple('Score', 'name level score')
+
 class Direction:
     pass
 
@@ -107,7 +109,6 @@ class Use:
                 world.current_level, DOWN_STAIRS)
 
             world.hero = down_stairs[0]
-            renethack.world.remove_entity(world.current_level, world.hero)
             renethack.world.add_entity(world.current_level, world.hero, hero)
 
             hero.add_message('You ascend the stairs.')
@@ -122,7 +123,6 @@ class Use:
             world.lower_levels = world.lower_levels[1:]
 
             world.hero = (centre, centre)
-            renethack.world.remove_entity(world.current_level, world.hero)
             renethack.world.add_entity(world.current_level, world.hero, hero)
 
             hero.add_message('You descend the stairs.')
