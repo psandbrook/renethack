@@ -177,15 +177,15 @@ def new_goblin(world: World) -> Monster:
 
 monster_fns = [
     [new_goblin],
-    [],
-    [],
-    [],
-    [],
-    [],
-    [],
-    [],
-    [],
-    [],
+    [new_goblin],
+    [new_goblin],
+    [new_goblin],
+    [new_goblin],
+    [new_goblin],
+    [new_goblin],
+    [new_goblin],
+    [new_goblin],
+    [new_goblin],
     ]
 
 from renethack.world import UP_STAIRS, DOWN_STAIRS, CLOSED_DOOR, OPEN_DOOR

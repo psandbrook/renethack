@@ -10,7 +10,9 @@ from pygame.font import Font
 import renethack
 from renethack.entity_types import Hero, Score
 from renethack.world_types import World
-from renethack.util import validate, get_maindir, raw_filename, clamp, xrange
+from renethack.util import validate, get_maindir, raw_filename, clamp, min_clamp, max_clamp, xrange
+
+RESOLUTIONS =[(800, 600), (1280, 1024), (1366, 768), (1920, 1080)]
 
 class Label:
     """Fixed text that is always visible."""
@@ -589,6 +591,114 @@ class ScoreDisplay:
 
         for c in self.components:
             c.render(surface)
+
+class ResolutionDisplay:
+    """Displays the resolution and provides controls to chage it."""
+
+    def __init__(
+            self,
+            pos: tuple,
+            height: float) -> None:
+
+        validate(self.__init__, locals())
+
+        pos_x, pos_y = pos
+        width = height*6
+        button_offset = width*0.1
+
+        self.left_button = Button(
+            pos=(pos_x - width/2 + button_offset, pos_y),
+            width=width*0.2,
+            height=height,
+            text='<'
+            )
+
+        self.right_button = Button(
+            pos=(pos_x + width/2 - button_offset, pos_y),
+            width=width*0.2,
+            height=height,
+            text='>'
+            )
+
+        self.resolution_label = Label(
+            pos=pos,
+            height=height,
+            text='',
+            font_type='sans',
+            alignment='centre'
+            )
+
+        self.components = [
+            self.left_button,
+            self.right_button,
+            self.resolution_label
+            ]
+
+    def res_update(self, res: tuple) -> tuple:
+        """
+        Update this component using `res`. Returns
+        the new resolution.
+        """
+        validate(self.res_update, locals())
+
+        res_index = RESOLUTIONS.index(res)
+
+        if self.left_button.pressed:
+            res_index = min_clamp(res_index - 1, 0)
+
+        elif self.right_button.pressed:
+            res_index = max_clamp(res_index + 1, len(RESOLUTIONS) - 1)
+
+        res = RESOLUTIONS[res_index]
+        x, y = res
+        self.resolution_label.text = '{}x{}'.format(x, y)
+        return res
+
+    def check_event(self, event: EventType) -> None:
+        """Check `event` with this element."""
+        validate(self.check_event, locals())
+
+        for c in self.components:
+            c.check_event(event)
+
+    def step(self, ms_per_step: float) -> None:
+        """Update this element."""
+        validate(self.step, locals())
+
+        for c in self.components:
+            c.step(ms_per_step)
+
+    def render(self, surface: Surface) -> None:
+        """Render this label to the given surface."""
+        validate(self.render, locals())
+
+        for c in self.components:
+            c.render(surface)
+
+class VolumeDisplay:
+    """Displays the volume and provides controls to change it."""
+
+    def __init__(
+            self,
+            pos: tuple,
+            height: float) -> None:
+
+        validate(self.__init__, locals())
+
+        #surface_w, surface_h = pygame.display.get_surface().get_size()
+        pos_x, pos_y = pos
+
+    def check_event(self, event: EventType) -> None:
+        """Check `event` with this element."""
+        validate(self.check_event, locals())
+
+    def step(self, ms_per_step: float) -> None:
+        """Update this element."""
+        validate(self.step, locals())
+
+    def render(self, surface: Surface) -> None:
+        """Render this label to the given surface."""
+        validate(self.render, locals())
 
 def colourise(surface: Surface, rgb: tuple) -> Surface:
     """

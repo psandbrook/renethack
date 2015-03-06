@@ -5,52 +5,53 @@ import pygame
 from pygame import Surface
 
 import renethack
-from renethack.gui import Label, Button, TextBox, WorldDisplay, StatusDisplay, MessageDisplay, ScoreDisplay
+from renethack.config import Config
+from renethack.gui import Label, Button, TextBox, WorldDisplay, StatusDisplay, MessageDisplay, ScoreDisplay, ResolutionDisplay, VolumeDisplay
 from renethack.entity_types import Hero, Score
 from renethack.util import validate, xrange, get_maindir
 
 LEVELS = 10
 LEVEL_LENGTH = 30
 
-scores_path = os.path.join(get_maindir(), 'scores.dat')
+scores_path = os.path.join(get_maindir(), 'scores.pickle')
 
 class MainMenu:
 
     def __init__(self) -> None:
         """Initialise the main menu to the default state."""
 
-        button_y_pos = xrange(0.28, 1, 0.16)
+        y_positions = xrange(0.28, 1, 0.16)
 
         self.newgame_button = Button(
-            pos=(0.5, next(button_y_pos)),
+            pos=(0.5, next(y_positions)),
             width=0.4,
             height=0.1,
             text='New Game'
             )
 
         self.instructions_button = Button(
-            pos=(0.5, next(button_y_pos)),
+            pos=(0.5, next(y_positions)),
             width=0.4,
             height=0.1,
             text='How To Play'
             )
 
         self.scores_button = Button(
-            pos=(0.5, next(button_y_pos)),
+            pos=(0.5, next(y_positions)),
             width=0.4,
             height=0.1,
             text='High Scores'
             )
 
         self.options_button = Button(
-            pos=(0.5, next(button_y_pos)),
+            pos=(0.5, next(y_positions)),
             width=0.4,
             height=0.1,
             text='Options'
             )
 
         self.exit_button = Button(
-            pos=(0.5, next(button_y_pos)),
+            pos=(0.5, next(y_positions)),
             width=0.4,
             height=0.1,
             text='Exit'
@@ -74,7 +75,7 @@ class MainMenu:
                 )
             )
 
-    def step(self, ms_per_step: float):
+    def step(self, ms_per_step: float, config: Config):
         """Step this main menu state."""
         validate(self.step, locals())
 
@@ -131,8 +132,15 @@ class NewGame:
         """Initialise this state."""
         validate(self.__init__, locals())
 
+        self.back_button = Button(
+            pos=(0.1, 0.1),
+            width=0.16,
+            height=0.08,
+            text='Back'
+            )
+
         self.text_box = TextBox(pos=(0.5, 0.5), height=0.1)
-        self.components = [self.text_box]
+        self.components = [self.back_button, self.text_box]
 
         self.components.append(
             Label(
@@ -144,7 +152,7 @@ class NewGame:
                 )
             )
 
-    def step(self, ms_per_step: float):
+    def step(self, ms_per_step: float, config: Config):
         """Update this state."""
         validate(self.step, locals())
 
@@ -158,14 +166,14 @@ class NewGame:
                 if event.key == pygame.K_RETURN:
                     return MainGame(self.text_box.get_text())
 
-                elif event.key == pygame.K_ESCAPE:
-                    return MainMenu()
-
             for c in self.components:
                 c.check_event(event)
 
         for c in self.components:
             c.step(ms_per_step)
+
+        if self.back_button.pressed:
+            return MainMenu()
 
         return self
 
@@ -226,7 +234,7 @@ class MainGame:
                 )
             )
 
-    def step(self, ms_per_step: float):
+    def step(self, ms_per_step: float, config: Config):
         """Step the game state."""
         validate(self.step, locals())
 
@@ -308,9 +316,16 @@ class HowToPlay:
     def __init__(self) -> None:
         """Initialise this state."""
 
-        self.components = []
+        self.back_button = Button(
+            pos=(0.1, 0.1),
+            width=0.16,
+            height=0.08,
+            text='Back'
+            )
 
-    def step(self, ms_per_step: float):
+        self.components = [self.back_button]
+
+    def step(self, ms_per_step: float, config: Config):
         """Update this state."""
         validate(self.step, locals())
 
@@ -326,6 +341,9 @@ class HowToPlay:
 
         for c in self.components:
             c.step(ms_per_step)
+
+        if self.back_button.pressed:
+            return MainMenu()
 
         return self
 
@@ -342,15 +360,14 @@ class HighScores:
     def __init__(self) -> None:
         """Initialise this state."""
 
-        self.exit_button = Button(
+        self.back_button = Button(
             pos=(0.1, 0.1),
             width=0.16,
             height=0.08,
-            text='Exit'
+            text='Back'
             )
 
-        self.components = [self.exit_button]
-        number_y_pos = list(xrange(0.35, 1, 0.2))
+        self.components = [self.back_button]
 
         self.components.append(
             Label(
@@ -362,48 +379,31 @@ class HighScores:
                 )
             )
 
-        self.components.append(
-            Label(
-                pos=(0.3, number_y_pos[0]),
-                height=0.15,
-                text='1',
-                font_type='sans',
-                alignment='centre'
-                )
-            )
+        y_positions = list(xrange(0.35, 1, 0.2))
 
-        self.components.append(
-            Label(
-                pos=(0.3, number_y_pos[1]),
-                height=0.15,
-                text='2',
-                font_type='sans',
-                alignment='centre'
+        for i in range(3):
+            self.components.append(
+                Label(
+                    pos=(0.3, y_positions[i]),
+                    height=0.15,
+                    text=str(i + 1),
+                    font_type='sans',
+                    alignment='centre'
+                    )
                 )
-            )
-
-        self.components.append(
-            Label(
-                pos=(0.3, number_y_pos[2]),
-                height=0.15,
-                text='3',
-                font_type='sans',
-                alignment='centre'
-                )
-            )
 
         scores = load_scores()
 
         for i in range(len(scores)):
             self.components.append(
                 ScoreDisplay(
-                    pos=(0.4, number_y_pos[i]),
+                    pos=(0.4, y_positions[i]),
                     height=0.15,
                     score=scores[i]
                     )
                 )
 
-    def step(self, ms_per_step: float):
+    def step(self, ms_per_step: float, config: Config):
         """Update this state."""
         validate(self.step, locals())
 
@@ -420,7 +420,7 @@ class HighScores:
         for c in self.components:
             c.step(ms_per_step)
 
-        if self.exit_button.pressed:
+        if self.back_button.pressed:
             return MainMenu()
 
         return self
@@ -438,6 +438,8 @@ class Options:
     def __init__(self) -> None:
         """Initialise this state."""
 
+        self.config = None
+
         self.title_label = Label(
             pos=(0.5, 0.1),
             height=0.15,
@@ -446,19 +448,73 @@ class Options:
             alignment='centre'
             )
 
-        self.exit_button = Button(
+        self.back_button = Button(
             pos=(0.1, 0.1),
             width=0.16,
             height=0.08,
-            text='Exit'
+            text='Back'
+            )
+
+        y_positions = list(xrange(0.3, 1, 0.2))
+
+        self.fullscreen_button = Button(
+            pos=(0.7, y_positions[0]),
+            width=0.2,
+            height=0.08,
+            text=''
+            )
+
+        self.res_display = ResolutionDisplay(
+            pos=(0.7, y_positions[1]),
+            height=0.08
+            )
+
+        self.apply_button = Button(
+            pos=(0.5, y_positions[3]),
+            width=0.16,
+            height=0.08,
+            text='Apply'
             )
 
         self.components = [
             self.title_label,
-            self.exit_button
+            self.back_button,
+            self.fullscreen_button,
+            self.res_display,
+            self.apply_button
             ]
 
-    def step(self, ms_per_step: float):
+        self.components.append(
+            Label(
+                pos=(0.05, y_positions[0]),
+                height=0.08,
+                text='Fullscreen',
+                font_type='sans',
+                alignment='left'
+                )
+            )
+
+        self.components.append(
+            Label(
+                pos=(0.05, y_positions[1]),
+                height=0.08,
+                text='Resolution',
+                font_type='sans',
+                alignment='left'
+                )
+            )
+
+        self.components.append(
+            Label(
+                pos=(0.05, y_positions[2]),
+                height=0.08,
+                text='Volume',
+                font_type='sans',
+                alignment='left'
+                )
+            )
+
+    def step(self, ms_per_step: float, config: Config):
         """Update this state."""
         validate(self.step, locals())
 
@@ -475,8 +531,28 @@ class Options:
         for c in self.components:
             c.step(ms_per_step)
 
-        if self.exit_button.pressed:
+        if self.back_button.pressed:
             return MainMenu()
+
+        elif self.apply_button.pressed:
+            return lambda: Options(), self.config
+
+        if self.config is None:
+            self.config = config
+
+        if self.fullscreen_button.pressed:
+
+            self.config = self.config._replace(
+                fullscreen=not self.config.fullscreen)
+
+        if self.config.fullscreen:
+            self.fullscreen_button.text = 'Enabled'
+
+        else:
+            self.fullscreen_button.text = 'Disabled'
+
+        self.config = self.config._replace(
+            resolution=self.res_display.res_update(self.config.resolution))
 
         return self
 

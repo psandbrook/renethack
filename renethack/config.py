@@ -6,7 +6,7 @@ from pygame import Surface
 import renethack
 from renethack.util import validate
 
-Config = collections.namedtuple('Config', 'fullscreen resolution')
+Config = collections.namedtuple('Config', 'fullscreen resolution volume')
 # fullscreen: bool
 # resolution: (int, int)
 

@@ -74,6 +74,15 @@ def min_clamp(value, min_):
     else:
         return value
 
+def max_clamp(value, max_):
+    """Returns a value that is less than or equal to `max_`."""
+
+    if value > max_:
+        return max_
+
+    else:
+        return value
+
 def iter_to_maybe(iterable):
     """
     Return the first element of `iterable`,
