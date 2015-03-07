@@ -11,6 +11,8 @@ from renethack.util import get_maindir, get_millitime
 config_path = os.path.join(get_maindir(), 'config.pickle')
 # The path to the config file.
 
+music_path = os.path.join(get_maindir(), 'data', 'music', 'Adventure Meme.ogg')
+
 MS_PER_STEP = 1000.0 / 80.0
 # How many milliseconds the simulation is updated by each step.
 
@@ -23,11 +25,13 @@ def start() -> None:
 
     pygame.init()
     pygame.key.set_repeat(500, 10)
+    pygame.mixer.music.load(music_path)
+    pygame.mixer.music.play(-1)
 
     default_config = Config(
         fullscreen=False,
         resolution=(1366, 768),
-        volume=0.7
+        volume=1.0
         )
     # The default config to use if the config file does not exist.
 

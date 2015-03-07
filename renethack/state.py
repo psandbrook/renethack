@@ -20,40 +20,40 @@ class MainMenu:
     def __init__(self) -> None:
         """Initialise the main menu to the default state."""
 
-        y_positions = xrange(0.28, 1, 0.16)
+        button_y_pos = xrange(0.28, 1, 0.12)
 
         self.newgame_button = Button(
-            pos=(0.5, next(y_positions)),
+            pos=(0.5, next(button_y_pos)),
             width=0.4,
-            height=0.1,
+            height=0.08,
             text='New Game'
             )
 
         self.instructions_button = Button(
-            pos=(0.5, next(y_positions)),
+            pos=(0.5, next(button_y_pos)),
             width=0.4,
-            height=0.1,
+            height=0.08,
             text='How To Play'
             )
 
         self.scores_button = Button(
-            pos=(0.5, next(y_positions)),
+            pos=(0.5, next(button_y_pos)),
             width=0.4,
-            height=0.1,
+            height=0.08,
             text='High Scores'
             )
 
         self.options_button = Button(
-            pos=(0.5, next(y_positions)),
+            pos=(0.5, next(button_y_pos)),
             width=0.4,
-            height=0.1,
+            height=0.08,
             text='Options'
             )
 
         self.exit_button = Button(
-            pos=(0.5, next(y_positions)),
+            pos=(0.5, next(button_y_pos)),
             width=0.4,
-            height=0.1,
+            height=0.08,
             text='Exit'
             )
 
@@ -72,6 +72,58 @@ class MainMenu:
                 text='ReNetHack',
                 font_type='serif',
                 alignment='centre'
+                )
+            )
+
+        credit_y_pos = xrange(0.84, 1, 0.03)
+
+        self.components.append(
+            Label(
+                pos=(0.03, next(credit_y_pos)),
+                height=0.03,
+                text='Music:',
+                font_type='sans',
+                alignment='left'
+                )
+            )
+
+        self.components.append(
+            Label(
+                pos=(0.03, next(credit_y_pos)),
+                height=0.03,
+                text='"Adventure Meme"',
+                font_type='sans',
+                alignment='left'
+                )
+            )
+
+        self.components.append(
+            Label(
+                pos=(0.03, next(credit_y_pos)),
+                height=0.03,
+                text='Kevin MacLeod (incompetech.com)',
+                font_type='sans',
+                alignment='left'
+                )
+            )
+
+        self.components.append(
+            Label(
+                pos=(0.03, next(credit_y_pos)),
+                height=0.03,
+                text='Licensed under Creative Commons: By Attribution 3.0',
+                font_type='sans',
+                alignment='left'
+                )
+            )
+
+        self.components.append(
+            Label(
+                pos=(0.03, next(credit_y_pos)),
+                height=0.03,
+                text='http://creativecommons.org/licenses/by/3.0/',
+                font_type='sans',
+                alignment='left'
                 )
             )
 
@@ -469,6 +521,11 @@ class Options:
             height=0.08
             )
 
+        self.vol_display = VolumeDisplay(
+            pos=(0.7, y_positions[2]),
+            height=0.08
+            )
+
         self.apply_button = Button(
             pos=(0.5, y_positions[3]),
             width=0.16,
@@ -481,6 +538,7 @@ class Options:
             self.back_button,
             self.fullscreen_button,
             self.res_display,
+            self.vol_display,
             self.apply_button
             ]
 
@@ -518,6 +576,9 @@ class Options:
         """Update this state."""
         validate(self.step, locals())
 
+        if self.config is None:
+            self.config = config
+
         for event in pygame.event.get():
 
             if event.type == pygame.QUIT:
@@ -537,22 +598,19 @@ class Options:
         elif self.apply_button.pressed:
             return lambda: Options(), self.config
 
-        if self.config is None:
-            self.config = config
-
         if self.fullscreen_button.pressed:
 
             self.config = self.config._replace(
                 fullscreen=not self.config.fullscreen)
 
-        if self.config.fullscreen:
-            self.fullscreen_button.text = 'Enabled'
-
-        else:
-            self.fullscreen_button.text = 'Disabled'
+        self.fullscreen_button.text = \
+            'Enabled' if self.config.fullscreen else 'Disabled'
 
         self.config = self.config._replace(
             resolution=self.res_display.res_update(self.config.resolution))
+
+        self.config = self.config._replace(
+            volume=self.vol_display.vol_update(self.config.volume))
 
         return self
 

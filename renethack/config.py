@@ -24,4 +24,5 @@ def apply(config: Config) -> Surface:
         if config.fullscreen else 0
         )
 
+    pygame.mixer.music.set_volume(config.volume)
     return pygame.display.set_mode(config.resolution, flag)

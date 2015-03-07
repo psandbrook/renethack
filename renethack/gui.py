@@ -12,7 +12,7 @@ from renethack.entity_types import Hero, Score
 from renethack.world_types import World
 from renethack.util import validate, get_maindir, raw_filename, clamp, min_clamp, max_clamp, xrange
 
-RESOLUTIONS =[(800, 600), (1280, 1024), (1366, 768), (1920, 1080)]
+RESOLUTIONS = [(800, 600), (1280, 1024), (1366, 768), (1920, 1080)]
 
 class Label:
     """Fixed text that is always visible."""
@@ -604,18 +604,18 @@ class ResolutionDisplay:
 
         pos_x, pos_y = pos
         width = height*6
-        button_offset = width*0.1
+        button_offset = width*0.075
 
         self.left_button = Button(
             pos=(pos_x - width/2 + button_offset, pos_y),
-            width=width*0.2,
+            width=width*0.15,
             height=height,
             text='<'
             )
 
         self.right_button = Button(
             pos=(pos_x + width/2 - button_offset, pos_y),
-            width=width*0.2,
+            width=width*0.15,
             height=height,
             text='>'
             )
@@ -649,10 +649,10 @@ class ResolutionDisplay:
         elif self.right_button.pressed:
             res_index = max_clamp(res_index + 1, len(RESOLUTIONS) - 1)
 
-        res = RESOLUTIONS[res_index]
-        x, y = res
+        new_res = RESOLUTIONS[res_index]
+        x, y = new_res
         self.resolution_label.text = '{}x{}'.format(x, y)
-        return res
+        return new_res
 
     def check_event(self, event: EventType) -> None:
         """Check `event` with this element."""
@@ -685,20 +685,83 @@ class VolumeDisplay:
 
         validate(self.__init__, locals())
 
-        #surface_w, surface_h = pygame.display.get_surface().get_size()
+        surface_w, surface_h = pygame.display.get_surface().get_size()
         pos_x, pos_y = pos
+        width = height*6
+        button_width = 0.15
+        bar_width = (1 - 2*button_width)/10
+        bar_rect_width = bar_width*0.5
+        self.bars = 0
+
+        self.left_button = Button(
+            pos=(pos_x - width*(0.5 - button_width/2), pos_y),
+            width=width*button_width,
+            height=height,
+            text='<'
+            )
+
+        self.right_button = Button(
+            pos=(pos_x + width*(0.5 - button_width/2), pos_y),
+            width=width*button_width,
+            height=height,
+            text='>'
+            )
+
+        self.components = [self.left_button, self.right_button]
+
+        self.rects = [
+            Rect(
+                surface_w * (pos_x - width/2 + width*x),
+                surface_h * (pos_y - height/2),
+                surface_w * width * bar_rect_width,
+                surface_h * height
+                )
+            for x in xrange(
+                button_width + (bar_width - bar_rect_width)/2,
+                1-button_width,
+                bar_width
+                )
+            ]
+
+    def vol_update(self, volume: float) -> float:
+        """
+        Update this component using `volume`. Returns
+        the new volume.
+        """
+        validate(self.vol_update, locals())
+
+        if self.left_button.pressed:
+            volume = min_clamp(volume-0.1, 0.0)
+
+        elif self.right_button.pressed:
+            volume = max_clamp(volume+0.1, 1.0)
+
+        self.bars = round(volume * 10)
+        return volume
 
     def check_event(self, event: EventType) -> None:
         """Check `event` with this element."""
         validate(self.check_event, locals())
 
+        for c in self.components:
+            c.check_event(event)
+
     def step(self, ms_per_step: float) -> None:
         """Update this element."""
         validate(self.step, locals())
 
+        for c in self.components:
+            c.step(ms_per_step)
+
     def render(self, surface: Surface) -> None:
         """Render this label to the given surface."""
         validate(self.render, locals())
+
+        for c in self.components:
+            c.render(surface)
+
+        for x in range(self.bars):
+            surface.fill((255, 255, 255), self.rects[x])
 
 def colourise(surface: Surface, rgb: tuple) -> Surface:
     """
