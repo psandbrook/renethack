@@ -6,7 +6,7 @@ from pygame import Surface
 
 import renethack
 from renethack.config import Config
-from renethack.gui import Label, Button, TextBox, WorldDisplay, StatusDisplay, MessageDisplay, ScoreDisplay, ResolutionDisplay, VolumeDisplay
+from renethack.gui import Label, Button, Image, TextBox, WorldDisplay, StatusDisplay, MessageDisplay, ScoreDisplay, ResolutionDisplay, VolumeDisplay
 from renethack.entity_types import Hero, Score
 from renethack.util import validate, xrange, get_maindir
 
@@ -71,7 +71,8 @@ class MainMenu:
                 height=0.2,
                 text='ReNetHack',
                 font_type='serif',
-                alignment='centre'
+                alignment='centre',
+                colour=(255, 255, 255)
                 )
             )
 
@@ -83,7 +84,8 @@ class MainMenu:
                 height=0.03,
                 text='Music:',
                 font_type='sans',
-                alignment='left'
+                alignment='left',
+                colour=(255, 255, 255)
                 )
             )
 
@@ -93,7 +95,8 @@ class MainMenu:
                 height=0.03,
                 text='"Adventure Meme"',
                 font_type='sans',
-                alignment='left'
+                alignment='left',
+                colour=(255, 255, 255)
                 )
             )
 
@@ -103,7 +106,8 @@ class MainMenu:
                 height=0.03,
                 text='Kevin MacLeod (incompetech.com)',
                 font_type='sans',
-                alignment='left'
+                alignment='left',
+                colour=(255, 255, 255)
                 )
             )
 
@@ -113,7 +117,8 @@ class MainMenu:
                 height=0.03,
                 text='Licensed under Creative Commons: By Attribution 3.0',
                 font_type='sans',
-                alignment='left'
+                alignment='left',
+                colour=(255, 255, 255)
                 )
             )
 
@@ -123,7 +128,8 @@ class MainMenu:
                 height=0.03,
                 text='http://creativecommons.org/licenses/by/3.0/',
                 font_type='sans',
-                alignment='left'
+                alignment='left',
+                colour=(255, 255, 255)
                 )
             )
 
@@ -200,7 +206,8 @@ class NewGame:
                 height=0.1,
                 text='Enter name:',
                 font_type='serif',
-                alignment='centre'
+                alignment='centre',
+                colour=(255, 255, 255)
                 )
             )
 
@@ -377,6 +384,154 @@ class HowToPlay:
 
         self.components = [self.back_button]
 
+        self.components.append(
+            Label(
+                pos=(0.5, 0.1),
+                height=0.15,
+                text='How To Play',
+                font_type='serif',
+                alignment='centre',
+                colour=(255, 255, 255)
+                )
+            )
+
+        text_height = 0.06
+        image_height = text_height*1.4
+        y_positions = list(xrange(0.25, 1, text_height*1.8))
+
+        def icon(name):
+            return os.path.join(
+                get_maindir(),
+                'data',
+                'icons',
+                '{}.png'.format(name)
+                )
+
+        self.components.append(
+            Label(
+                pos=(0.03, y_positions[0]),
+                height=text_height,
+                text='Click on a tile to move there.',
+                font_type='sans',
+                alignment='left',
+                colour=(255, 255, 255)
+                )
+            )
+
+        self.components.append(
+            Image(
+                filename=icon('Floor'),
+                pos=(0.95, y_positions[0]),
+                height=image_height
+                )
+            )
+
+        self.components.append(
+            Label(
+                pos=(0.03, y_positions[1]),
+                height=text_height,
+                text='Click on monsters to attack them.',
+                font_type='sans',
+                alignment='left',
+                colour=(255, 255, 255)
+                )
+            )
+
+        self.components.append(
+            Image(
+                filename=icon('Goblin'),
+                pos=(0.95, y_positions[1]),
+                height=image_height
+                )
+            )
+
+        self.components.append(
+            Label(
+                pos=(0.03, y_positions[2]),
+                height=text_height,
+                text='Click on doors to open or close them.',
+                font_type='sans',
+                alignment='left',
+                colour=(255, 255, 255)
+                )
+            )
+
+        self.components.append(
+            Image(
+                filename=icon('Open door'),
+                pos=(0.95, y_positions[2]),
+                height=image_height
+                )
+            )
+
+        self.components.append(
+            Label(
+                pos=(0.03, y_positions[3]),
+                height=text_height,
+                text='Click on stairs to move between levels.',
+                font_type='sans',
+                alignment='left',
+                colour=(255, 255, 255)
+                )
+            )
+
+        self.components.append(
+            Image(
+                filename=icon('Upwards stairway'),
+                pos=(0.95, y_positions[3]),
+                height=image_height
+                )
+            )
+
+        self.components.append(
+            Label(
+                pos=(0.03, y_positions[4]),
+                height=text_height,
+                text='Press space to wait.',
+                font_type='sans',
+                alignment='left',
+                colour=(255, 255, 255)
+                )
+            )
+
+        self.components.append(
+            Image(
+                filename=icon('Hero'),
+                pos=(0.95, y_positions[4]),
+                height=image_height
+                )
+            )
+
+        self.components.append(
+            Label(
+                pos=(0.03, y_positions[5]),
+                height=text_height,
+                text='Kill monsters to level up.',
+                font_type='sans',
+                alignment='left',
+                colour=(255, 255, 255)
+                )
+            )
+
+        self.components.append(
+            Label(
+                pos=(0.03, y_positions[6]),
+                height=text_height,
+                text='Harder monsters appear on lower floors.',
+                font_type='sans',
+                alignment='left',
+                colour=(255, 255, 255)
+                )
+            )
+
+        self.components.append(
+            Image(
+                filename=icon('Dragon'),
+                pos=(0.95, y_positions[6]),
+                height=image_height
+                )
+            )
+
     def step(self, ms_per_step: float, config: Config):
         """Update this state."""
         validate(self.step, locals())
@@ -427,7 +582,8 @@ class HighScores:
                 height=0.15,
                 text='High Scores',
                 font_type='serif',
-                alignment='centre'
+                alignment='centre',
+                colour=(255, 255, 255)
                 )
             )
 
@@ -440,7 +596,8 @@ class HighScores:
                     height=0.15,
                     text=str(i + 1),
                     font_type='sans',
-                    alignment='centre'
+                    alignment='centre',
+                    colour=(255, 255, 255)
                     )
                 )
 
@@ -492,14 +649,6 @@ class Options:
 
         self.config = None
 
-        self.title_label = Label(
-            pos=(0.5, 0.1),
-            height=0.15,
-            text='Options',
-            font_type='serif',
-            alignment='centre'
-            )
-
         self.back_button = Button(
             pos=(0.1, 0.1),
             width=0.16,
@@ -511,7 +660,7 @@ class Options:
 
         self.fullscreen_button = Button(
             pos=(0.7, y_positions[0]),
-            width=0.2,
+            width=0.25,
             height=0.08,
             text=''
             )
@@ -534,7 +683,6 @@ class Options:
             )
 
         self.components = [
-            self.title_label,
             self.back_button,
             self.fullscreen_button,
             self.res_display,
@@ -544,11 +692,23 @@ class Options:
 
         self.components.append(
             Label(
+                pos=(0.5, 0.1),
+                height=0.15,
+                text='Options',
+                font_type='serif',
+                alignment='centre',
+                colour=(255, 255, 255)
+                )
+            )
+
+        self.components.append(
+            Label(
                 pos=(0.05, y_positions[0]),
                 height=0.08,
                 text='Fullscreen',
                 font_type='sans',
-                alignment='left'
+                alignment='left',
+                colour=(255, 255, 255)
                 )
             )
 
@@ -558,7 +718,8 @@ class Options:
                 height=0.08,
                 text='Resolution',
                 font_type='sans',
-                alignment='left'
+                alignment='left',
+                colour=(255, 255, 255)
                 )
             )
 
@@ -568,7 +729,8 @@ class Options:
                 height=0.08,
                 text='Volume',
                 font_type='sans',
-                alignment='left'
+                alignment='left',
+                colour=(255, 255, 255)
                 )
             )
 

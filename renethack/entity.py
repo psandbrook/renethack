@@ -159,13 +159,11 @@ def rand_hero(name: str) -> Hero:
         hit_points=random.randint(7, 10),
         defence=random.randint(0, 1),
         speed=random.randint(50, 75),
-        strength=random.randint(1, 3)
+        strength=random.randint(1, 2)
         )
 
-def new_goblin(world: World) -> Monster:
-    """Return a new goblin."""
-    validate(new_goblin, locals())
-
+def new_goblin() -> Monster:
+    """Returns a new goblin."""
     return Monster(
         name='Goblin',
         hit_points=3,
@@ -175,17 +173,149 @@ def new_goblin(world: World) -> Monster:
         open_doors=True
         )
 
+def new_giant_ant() -> Monster:
+    """Returns a new giant ant."""
+    return Monster(
+        name='Giant Ant',
+        hit_points=2,
+        defence=0,
+        speed=80,
+        strength=1,
+        open_doors=False
+        )
+
+def new_giant_rat() -> Monster:
+    """Returns a new giant rat."""
+    return Monster(
+        name='Giant Rat',
+        hit_points=1,
+        defence=0,
+        speed=80,
+        strength=1,
+        open_doors=False
+        )
+
+def new_gremlin() -> Monster:
+    """Returns a new gremlin."""
+    return Monster(
+        name='Gremlin',
+        hit_points=2,
+        defence=0,
+        speed=90,
+        strength=1,
+        open_doors=True
+        )
+
+def new_wolf() -> Monster:
+    """Returns a new wolf."""
+    return Monster(
+        name='Wolf',
+        hit_points=3,
+        defence=0,
+        speed=90,
+        strength=3,
+        open_doors=False
+        )
+
+def new_black_naga() -> Monster:
+    """Returns a new black naga."""
+    return Monster(
+        name='Black Naga',
+        hit_points=5,
+        defence=3,
+        speed=60,
+        strength=4,
+        open_doors=True
+        )
+
+def new_floating_eye() -> Monster:
+    """Returns a new floating eye."""
+    return Monster(
+        name='Floating Eye',
+        hit_points=3,
+        defence=2,
+        speed=60,
+        strength=2,
+        open_doors=False
+        )
+
+def new_gelationous_cube() -> Monster:
+    """Returns a new gelationous cube."""
+    return Monster(
+        name='Gelationous Cube',
+        hit_points=5,
+        defence=2,
+        speed=35,
+        strength=4,
+        open_doors=False
+        )
+
+def new_fire_elemental() -> Monster:
+    """Returns a new fire elemental."""
+    return Monster(
+        name='Fire Elemental',
+        hit_points=6,
+        defence=2,
+        speed=75,
+        strength=5,
+        open_doors=True
+        )
+
+def new_jabberwock() -> Monster:
+    """Returns a new jabberwock."""
+    return Monster(
+        name='Jabberwock',
+        hit_points=9,
+        defence=3,
+        speed=100,
+        strength=6,
+        open_doors=True
+        )
+
+def new_mind_flayer() -> Monster:
+    """Returns a new mind flayer."""
+    return Monster(
+        name='Mind Flayer',
+        hit_points=15,
+        defence=5,
+        speed=100,
+        strength=8,
+        open_doors=True
+        )
+
+def new_dragon() -> Monster:
+    """Returns a new dragon."""
+    return Monster(
+        name='Dragon',
+        hit_points=20,
+        defence=5,
+        speed=70,
+        strength=6,
+        open_doors=True
+        )
+
+def new_couatl() -> Monster:
+    """Returns a new couatl."""
+    return Monster(
+        name='Couatl',
+        hit_points=30,
+        defence=10,
+        speed=100,
+        strength=10,
+        open_doors=True
+        )
+
 monster_fns = [
-    [new_goblin],
-    [new_goblin],
-    [new_goblin],
-    [new_goblin],
-    [new_goblin],
-    [new_goblin],
-    [new_goblin],
-    [new_goblin],
-    [new_goblin],
-    [new_goblin],
+    [new_giant_ant, new_gremlin, new_giant_rat],
+    [new_giant_ant, new_gremlin, new_goblin, new_floating_eye, new_giant_rat],
+    [new_giant_ant, new_gremlin, new_goblin, new_wolf, new_floating_eye],
+    [new_goblin, new_wolf, new_floating_eye],
+    [new_goblin, new_wolf, new_black_naga],
+    [new_gelationous_cube, new_fire_elemental, new_black_naga],
+    [new_gelationous_cube, new_fire_elemental, new_black_naga],
+    [new_gelationous_cube, new_fire_elemental, new_jabberwock],
+    [new_dragon, new_mind_flayer, new_jabberwock],
+    [new_dragon, new_mind_flayer, new_couatl],
     ]
 
 from renethack.world import UP_STAIRS, DOWN_STAIRS, CLOSED_DOOR, OPEN_DOOR

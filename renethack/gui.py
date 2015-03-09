@@ -1,4 +1,5 @@
 import os
+import itertools
 import textwrap
 from types import GeneratorType
 
@@ -23,7 +24,8 @@ class Label:
             height: float,
             text: str,
             font_type: str,
-            alignment: str) -> None:
+            alignment: str,
+            colour: tuple) -> None:
 
         validate(self.__init__, locals())
 
@@ -40,6 +42,7 @@ class Label:
 
         self.text = text
         self.alignment = alignment
+        self.colour = colour
 
     def check_event(self, event: EventType) -> None:
         """Check `event` with this element."""
@@ -53,12 +56,7 @@ class Label:
         """Render this label to the given surface."""
         validate(self.render, locals())
 
-        font_render = self.font.render(
-            self.text,
-            True,
-            (255, 255, 255)
-            )
-
+        font_render = self.font.render(self.text, True, self.colour)
         x, y = self.pos
 
         if self.alignment == 'centre':
@@ -174,13 +172,47 @@ class Button:
             (centre_x - centre_xoffset, centre_y - centre_yoffset)
             )
 
+class Image:
+    """Displays an image loaded from a file."""
+
+    def __init__(self, filename: str, pos: tuple, height: float) -> None:
+        validate(self.__init__, locals())
+
+        surface_w, surface_h = pygame.display.get_surface().get_size()
+        pos_x, pos_y = pos
+
+        raw_img = pygame.image.load(filename)
+        height_px = surface_h * height
+        width_px = height_px / (raw_img.get_height() / raw_img.get_width())
+
+        self.top_left = (
+            surface_w*pos_x - width_px/2,
+            surface_h*pos_y - height_px/2
+            )
+
+        self.image = pygame.transform.scale(
+            raw_img,
+            (int(width_px), int(height_px))
+            )
+
+    def check_event(self, event: EventType) -> None:
+        """Check `event` with this element."""
+        validate(self.check_event, locals())
+
+    def step(self, ms_per_step: float) -> None:
+        """Update this element."""
+        validate(self.step, locals())
+
+    def render(self, surface: Surface) -> None:
+        """Render this element to the given surface."""
+        validate(self.render, locals())
+
+        surface.blit(self.image, self.top_left)
+
 class TextBox:
     """Displays text in a box that the user has input."""
 
-    def __init__(
-            self,
-            pos: tuple,
-            height: float) -> None:
+    def __init__(self, pos: tuple, height: float) -> None:
 
         validate(self.__init__, locals())
 
@@ -202,7 +234,8 @@ class TextBox:
             height=height*0.8,
             text='',
             font_type='sans',
-            alignment='centre'
+            alignment='centre',
+            colour=(255, 255, 255)
             )
 
     def get_text(self) -> str:
@@ -385,11 +418,7 @@ class WorldDisplay:
 class StatusDisplay:
     """Displays the hero's status."""
 
-    def __init__(
-            self,
-            pos: tuple,
-            width: float,
-            hero: Hero) -> None:
+    def __init__(self, pos: tuple, width: float, hero: Hero) -> None:
 
         validate(self.__init__, locals())
 
@@ -406,7 +435,8 @@ class StatusDisplay:
                 height=text_height,
                 text='',
                 font_type='mono',
-                alignment='left'
+                alignment='left',
+                colour=(255, 255, 255)
                 )
             for x in xrange(1/14, 1, 1/7)
             )
@@ -460,11 +490,7 @@ class StatusDisplay:
 class MessageDisplay:
     """Displays game messages."""
 
-    def __init__(
-            self,
-            pos: tuple,
-            width:float,
-            height: float) -> None:
+    def __init__(self, pos: tuple, width: float, height: float) -> None:
 
         validate(self.__init__, locals())
 
@@ -474,7 +500,7 @@ class MessageDisplay:
         top_pos = pos_y - height/2
 
         self.messages = []
-        line_height = height*0.04
+        line_height = height*0.03
         self.font_height = line_height*0.8
 
         font = Font(
@@ -519,14 +545,18 @@ class MessageDisplay:
         if len(self.messages) > self.lines:
             del self.messages[:len(self.messages) - self.lines + 1]
 
-        for msg, y_pos in zip(self.messages, self.y_positions):
+        colours = itertools.cycle([(255, 255, 255), (190, 190, 190)])
+        seq = zip(self.messages, self.y_positions, colours)
+
+        for msg, y_pos, colour in seq:
 
             label = Label(
                 pos=(self.left_pos, y_pos),
                 height=self.font_height,
                 text=msg,
                 font_type='mono',
-                alignment='left'
+                alignment='left',
+                colour=colour
                 )
 
             label.render(surface)
@@ -534,11 +564,7 @@ class MessageDisplay:
 class ScoreDisplay:
     """Displays a character's score."""
 
-    def __init__(
-            self,
-            pos: tuple,
-            height: float,
-            score: Score) -> None:
+    def __init__(self, pos: tuple, height: float, score: Score) -> None:
 
         validate(self.__init__, locals())
 
@@ -553,7 +579,8 @@ class ScoreDisplay:
                 height=text_height,
                 text='Name: {}'.format(score.name),
                 font_type='sans',
-                alignment='left'
+                alignment='left',
+                colour=(255, 255, 255)
                 )
             )
 
@@ -563,7 +590,8 @@ class ScoreDisplay:
                 height=text_height,
                 text='Level: {}'.format(score.level),
                 font_type='sans',
-                alignment='left'
+                alignment='left',
+                colour=(255, 255, 255)
                 )
             )
 
@@ -573,7 +601,8 @@ class ScoreDisplay:
                 height=text_height,
                 text='Score: {}'.format(score.score),
                 font_type='sans',
-                alignment='left'
+                alignment='left',
+                colour=(255, 255, 255)
                 )
             )
 
@@ -595,10 +624,7 @@ class ScoreDisplay:
 class ResolutionDisplay:
     """Displays the resolution and provides controls to chage it."""
 
-    def __init__(
-            self,
-            pos: tuple,
-            height: float) -> None:
+    def __init__(self, pos: tuple, height: float) -> None:
 
         validate(self.__init__, locals())
 
@@ -625,7 +651,8 @@ class ResolutionDisplay:
             height=height,
             text='',
             font_type='sans',
-            alignment='centre'
+            alignment='centre',
+            colour=(255, 255, 255)
             )
 
         self.components = [
@@ -678,10 +705,7 @@ class ResolutionDisplay:
 class VolumeDisplay:
     """Displays the volume and provides controls to change it."""
 
-    def __init__(
-            self,
-            pos: tuple,
-            height: float) -> None:
+    def __init__(self, pos: tuple, height: float) -> None:
 
         validate(self.__init__, locals())
 

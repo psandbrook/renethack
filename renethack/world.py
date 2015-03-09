@@ -536,12 +536,12 @@ def step(world: World):
 
         if (tile.entity is None
                 and tile.type is FLOOR
-                and rand_chance(0.1)):
+                and rand_chance(0.2)):
 
             monster_fn = random.choice(
                 renethack.entity.monster_fns[len(world.upper_levels)])
 
-            add_entity(world.current_level, (x, y), monster_fn(world))
+            add_entity(world.current_level, (x, y), monster_fn())
 
     updated_entities = []
 

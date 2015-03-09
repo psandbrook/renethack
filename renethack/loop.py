@@ -31,7 +31,7 @@ def start() -> None:
     default_config = Config(
         fullscreen=False,
         resolution=(1366, 768),
-        volume=1.0
+        volume=0.7
         )
     # The default config to use if the config file does not exist.
 
