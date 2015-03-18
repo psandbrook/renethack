@@ -8,12 +8,18 @@ from renethack.world_types import World, Level
 from renethack.util import validate, iter_to_maybe, min_clamp
 
 Score = collections.namedtuple('Score', 'name level score')
+# name: str
+# level: int
+# score: int
 
 class Direction:
-    pass
+    """The type of a value that represents a direction."""
 
 class Move:
-    """Move the hero in the saved direction."""
+    """
+    An action class that moves the hero in the direction given
+    at initialisation.
+    """
 
     def __init__(self, direction: Direction) -> None:
         validate(self.__init__, locals())
@@ -33,9 +39,10 @@ class Move:
 
         hero.energy -= 100
 
-        if target_tile.entity is not None:
+        # If there is an entity already on the target tile, attack it.
+        # Otherwise, move to the target tile.
 
-            # Attack
+        if target_tile.entity is not None:
 
             damage = min_clamp(hero.strength - target_tile.entity.defence, 0)
             target_tile.entity.hit_points -= damage
@@ -43,6 +50,8 @@ class Move:
             hero.add_message('You hit the {} for {} damage!'.format(
                 target_tile.entity.name, damage))
 
+            # The hero's action list must be cleared if they are not
+            # moved.
             hero.actions = []
 
         else:
@@ -51,7 +60,6 @@ class Move:
                 hero.add_message('You open the door.')
                 target_tile.type = OPEN_DOOR
 
-            # Move
             renethack.world.remove_entity(world.current_level, world.hero)
 
             renethack.world.add_entity(
@@ -63,7 +71,10 @@ class Move:
             world.hero = (target_x, target_y)
 
 class Use:
-    """Use the object in the saved direction."""
+    """
+    An action class that makes the hero use any object on the
+    tile in the direction given at initialisation.
+    """
 
     def __init__(self, direction: Direction) -> None:
         validate(self.__init__, locals())
@@ -86,9 +97,11 @@ class Use:
 
         hero.energy -= 100
 
-        if target_tile.entity is not None:
+        # If there is an entity already on the target tile, attack it.
+        # If there are stairs, ascend or descend them. If there is an
+        # open door, close it.
 
-            # Attack
+        if target_tile.entity is not None:
 
             damage = min_clamp(hero.strength - target_tile.entity.defence, 0)
             target_tile.entity.hit_points -= damage
@@ -98,8 +111,10 @@ class Use:
 
         elif target_tile.type is UP_STAIRS:
 
-            # Go to upper level
             renethack.world.remove_entity(world.current_level, world.hero)
+
+            # Place the hero at the downwards stairway on the
+            # above level.
 
             world.lower_levels.insert(0, world.current_level)
             world.current_level = world.upper_levels[0]
@@ -115,8 +130,10 @@ class Use:
 
         elif target_tile.type is DOWN_STAIRS:
 
-            # Go to lower level
             renethack.world.remove_entity(world.current_level, world.hero)
+
+            # Place the hero at the upwards stairway on the level
+            # below.
 
             world.upper_levels.insert(0, world.current_level)
             world.current_level = world.lower_levels[0]
@@ -132,7 +149,10 @@ class Use:
             hero.add_message('You close the door.')
 
 class Wait:
-    """Do nothing. Does not cost energy."""
+    """An action class that makes the hero do nothing for the turn.
+
+    This action does not cost energy.
+    """
 
     def execute(self, world: World) -> None:
         validate(self.execute, locals())
@@ -173,12 +193,15 @@ class Monster:
     def step(self, point: tuple, world: World) -> None:
         """Update this entity.
 
-        May modify values within `level`.
+        May modify values within `world`.
         """
         validate(self.step, locals())
 
         hero_x, hero_y = world.hero
         hero = world.current_level.tiles[hero_x][hero_y].entity
+
+        # If this entity is dead, remove it from the world.
+        # If it has enough energy, move it closer to the hero.
 
         if self.hit_points <= 0:
 
@@ -187,12 +210,11 @@ class Monster:
             hero.experience += 1
             hero.score += 10
             hero.add_message('The {} dies!'.format(self.name))
-
             return
 
         if self.energy >= 100:
 
-            # Calculate adjacent tile that is closest to hero and move
+            # Calculate the adjacent tile that is closest to hero and move
             # there.
 
             path = renethack.entity.find_path(
@@ -205,20 +227,23 @@ class Monster:
 
             target_tile = world.current_level.tiles[target_x][target_y]
 
+            # If the target tile is not passable or there is already
+            # an entity there that is not the hero, return immediately.
+
             if ((not target_tile.type.passable
                         and (target_tile.type is not CLOSED_DOOR
                             or not self.open_doors))
                     or (target_tile.entity is not None
                         and target_tile.entity is not hero)):
 
-                # If nothing can be done, return immediately.
                 return
 
             self.energy -= 100
 
-            if target_tile.entity is hero:
+            # If the hero is on the target tile, attack them.
+            # Otherwise, move there.
 
-                # Attack hero
+            if target_tile.entity is hero:
 
                 damage = min_clamp(self.strength - hero.defence, 0)
                 hero.hit_points -= damage
@@ -238,7 +263,6 @@ class Monster:
                 if target_tile.type is CLOSED_DOOR:
                     target_tile.type = OPEN_DOOR
 
-                # Move
                 renethack.world.remove_entity(world.current_level, point)
 
                 renethack.world.add_entity(
@@ -266,7 +290,6 @@ class Hero:
         defence: damage reduction
         speed: energy gain per turn
         strength: damage
-        open_doors: ability to open doors
         """
         validate(self.__init__, locals())
 
@@ -288,8 +311,7 @@ class Hero:
 
     def path_to(self, world: World, point: tuple) -> None:
         """
-        Generate the necessary actions to
-        move the hero to `point`.
+        Generate the necessary actions to move the hero to `point`.
         """
         validate(self.path_to, locals())
 
@@ -308,6 +330,9 @@ class Hero:
             world.hero, point, world.current_level)
 
         moves = [Move(d) for d in directions]
+
+        # If the target tile type is special, convert the last action
+        # to a `Use`.
 
         if (tile.type is UP_STAIRS
                 or tile.type is DOWN_STAIRS
@@ -337,6 +362,8 @@ class Hero:
         """
         validate(self.step, locals())
 
+        # If the hero has enough experience, make them gain a level.
+
         if self.experience >= 6:
 
             self.experience = 0
@@ -348,6 +375,8 @@ class Hero:
             self.defence += 1
             self.speed += 10
             self.strength += 1
+
+        # Allow the hero to regenerate hit points every few turns.
 
         if self.hit_points < self.max_hit_points:
 
@@ -361,6 +390,9 @@ class Hero:
         else:
             self.hp_counter = 0
 
+        # Make the hero perform the next action in the list if they
+        # have enough energy.
+
         if self.energy >= 100: 
 
             action = self.actions[0]
@@ -371,7 +403,16 @@ class Hero:
         self.energy += self.speed
 
 class Node:
-    """A point with extra metadata."""
+    """A point with extra metadata.
+
+    Attributes:
+        parent
+        point
+        cost: The total number of parents this node has.
+        remaining_cost: The estimated distance between this node and
+            the target point.
+        final_cost: `cost` + `remaining_cost`.
+    """
 
     def __init__(
             self,

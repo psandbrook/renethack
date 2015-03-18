@@ -11,14 +11,27 @@ from renethack.entity_types import Hero, Score
 from renethack.util import validate, xrange, get_maindir
 
 LEVELS = 10
+# The number of levels in each game.
+
 LEVEL_LENGTH = 30
+# The length of each side of a level.
 
 scores_path = os.path.join(get_maindir(), 'scores.pickle')
+# The path to the scores file.
 
 class MainMenu:
+    """The main menu of the game.
+
+    Displays the title of the game and a list of buttons that lead to
+    the other parts of the program. Also displays the music credits
+    in the bottom left corner.
+    """
 
     def __init__(self) -> None:
-        """Initialise the main menu to the default state."""
+        """Initialise a new `MainMenu` object."""
+
+        # The buttons must have the same x position but different y
+        # positions.
 
         button_y_pos = xrange(0.28, 1, 0.12)
 
@@ -134,26 +147,26 @@ class MainMenu:
             )
 
     def step(self, ms_per_step: float, config: Config):
-        """Step this main menu state."""
+        """Update this main menu state."""
         validate(self.step, locals())
 
+        # Each state class is responsible for passing any queued events
+        # to its components and updating its components.
+
         for event in pygame.event.get():
-            # For each input event, check if it's a quit event
-            # and then pass the event through each component.
 
             if event.type == pygame.QUIT:
-                # If this is a quit event,
-                # return `None` immediately.
                 return None
 
             else:
                 for c in self.components:
                     c.check_event(event)
 
-        # Now that the input events have been checked,
-        # step each component:
         for c in self.components:
             c.step(ms_per_step)
+
+        # If a button has been pressed, return the appropriate new
+        # state. Otherwise, return this main menu.
 
         if self.exit_button.pressed:
             return None
@@ -171,23 +184,29 @@ class MainMenu:
             return Options()
 
         else:
-            # If nothing has happened, keep this main menu:
             return self
 
     def render(self, surface: Surface) -> None:
         """Render this main menu to the given surface."""
         validate(self.render, locals())
 
+        # Before rendering each component, the screen must be cleared
+        # to black.
+
         surface.fill((0, 0, 0))
-        # Clear the screen to black.
 
         for c in self.components:
             c.render(surface)
 
 class NewGame:
+    """The state that shows when a new game is to be started.
+
+    A name for the player character can be entered. Pressing the
+    enter key starts the game.
+    """
 
     def __init__(self) -> None:
-        """Initialise this state."""
+        """Initialise a new `NewGame` object."""
         validate(self.__init__, locals())
 
         self.back_button = Button(
@@ -215,7 +234,14 @@ class NewGame:
         """Update this state."""
         validate(self.step, locals())
 
+        # Each state class is responsible for passing any queued events
+        # to its components and updating its components.
+
         for event in pygame.event.get():
+
+            # If the enter key has been pressed, return a new
+            # `MainGame` state using the name currently in the text
+            # box.
 
             if event.type == pygame.QUIT:
                 return None
@@ -240,11 +266,22 @@ class NewGame:
         """Render this state to the given surface."""
         validate(self.render, locals())
 
+        # Before rendering each component, the screen must be cleared
+        # to black.
+
         surface.fill((0, 0, 0))
+
         for c in self.components:
             c.render(surface)
 
 class MainGame:
+    """The state where the main game is played.
+
+    A 2D grid of tiles is shown that represents the current level that
+    the hero is on. The user can click on a tile to allow their
+    character to perform certain actions. A list of messages and the
+    character's stats are also shown to the sides of the screen.
+    """
 
     def __init__(self, name: str) -> None:
         """Initialise this object to its default state."""
@@ -297,7 +334,12 @@ class MainGame:
         """Step the game state."""
         validate(self.step, locals())
 
+        # Each state class is responsible for passing any queued events
+        # to its components and updating its components.
+
         for event in pygame.event.get():
+
+            # If the space key has been pressed, make the hero wait.
 
             if event.type == pygame.QUIT:
                 return None
@@ -310,11 +352,9 @@ class MainGame:
             else:
 
                 for c in self.components:
-                    # Pass on event to each component.
                     c.check_event(event)
 
         for c in self.components:
-            # Update each component.
             c.step(ms_per_step)
 
         if self.exit_button.pressed:
@@ -329,16 +369,16 @@ class MainGame:
 
         if self.hero.hit_points > 0:
 
-            # Check if a tile has been clicked.
             if self.world_display.pressed is not None:
                 self.hero.path_to(self.world, self.world_display.pressed)
 
+            # The world must only be updated if the hero has less than
+            # 100 energy or the hero has actions queued.
+
             if self.hero.energy < 100 or len(self.hero.actions) > 0:
-                # Update the world if not waiting for input.
                 renethack.world.step(self.world)
 
         elif not self.score_saved:
-            # The player character has died.
             self.save_score()
 
         return self
@@ -366,11 +406,20 @@ class MainGame:
         """Render the current game state."""
         validate(self.render, locals())
 
+        # Before rendering each component, the screen must be cleared
+        # to black.
+
         surface.fill((0, 0, 0))
+
         for c in self.components:
             c.render(surface)
 
 class HowToPlay:
+    """The state that shows instructions for the game.
+
+    A list of instructions is shown. Each instruction may have an
+    associated image.
+    """
 
     def __init__(self) -> None:
         """Initialise this state."""
@@ -394,6 +443,11 @@ class HowToPlay:
                 colour=(255, 255, 255)
                 )
             )
+
+        # Each label's associated image must have the same y position
+        # but a different x position. All of the labels must have the
+        # same x position and all of the images must have the same x
+        # position.
 
         text_height = 0.06
         image_height = text_height*1.4
@@ -536,6 +590,9 @@ class HowToPlay:
         """Update this state."""
         validate(self.step, locals())
 
+        # Each state class is responsible for passing any queued events
+        # to its components and updating its components.
+
         for event in pygame.event.get():
 
             if event.type == pygame.QUIT:
@@ -558,11 +615,20 @@ class HowToPlay:
         """Render this state to the given surface."""
         validate(self.render, locals())
 
+        # Before rendering each component, the screen must be cleared
+        # to black.
+
         surface.fill((0, 0, 0))
+
         for c in self.components:
             c.render(surface)
 
 class HighScores:
+    """The state that shows the high scores from the scores file.
+
+    A list of high scores is shown that is loaded from the scores file.
+    If the scores file does not exist, no scores are shown.
+    """
 
     def __init__(self) -> None:
         """Initialise this state."""
@@ -616,6 +682,9 @@ class HighScores:
         """Update this state."""
         validate(self.step, locals())
 
+        # Each state class is responsible for passing any queued events
+        # to its components and updating its components.
+
         for event in pygame.event.get():
 
             if event.type == pygame.QUIT:
@@ -638,11 +707,23 @@ class HighScores:
         """Render this state to the given surface."""
         validate(self.render, locals())
 
+        # Before rendering each component, the screen must be cleared
+        # to black.
+
         surface.fill((0, 0, 0))
+
         for c in self.components:
             c.render(surface)
 
 class Options:
+    """
+    The state that shows the configuration of the program and allows
+    the user to change it.
+
+    Controls to change the fullscreen, resolution and volume settings
+    are shown. The user must click the apply button to apply any
+    changes they make.
+    """
 
     def __init__(self) -> None:
         """Initialise this state."""
@@ -738,6 +819,9 @@ class Options:
         """Update this state."""
         validate(self.step, locals())
 
+        # Each state class is responsible for passing any queued events
+        # to its components and updating its components.
+
         if self.config is None:
             self.config = config
 
@@ -754,11 +838,17 @@ class Options:
         for c in self.components:
             c.step(ms_per_step)
 
+        # If the apply button has been pressed, the config must be
+        # changed immediately.
+
         if self.back_button.pressed:
             return MainMenu()
 
         elif self.apply_button.pressed:
             return lambda: Options(), self.config
+
+        # Each control must be updated using `self.config`. The values
+        # they return are what should be stored in `self.config`.
 
         if self.fullscreen_button.pressed:
 
@@ -780,11 +870,19 @@ class Options:
         """Render this state to the given surface."""
         validate(self.render, locals())
 
+        # Before rendering each component, the screen must be cleared
+        # to black.
+
         surface.fill((0, 0, 0))
+
         for c in self.components:
             c.render(surface)
 
 def load_scores() -> list:
+    """Returns the list of `Score` objects from the score file.
+
+    Returns an empty list if the score file does not exist.
+    """
 
     if os.path.exists(scores_path):
         with open(scores_path, 'rb') as file:

@@ -12,13 +12,14 @@ config_path = os.path.join(get_maindir(), 'config.pickle')
 # The path to the config file.
 
 music_path = os.path.join(get_maindir(), 'data', 'music', 'Adventure Meme.ogg')
+# The path to the music file.
 
 MS_PER_STEP = 1000.0 / 80.0
 # How many milliseconds the simulation is updated by each step.
 
 def start() -> None:
-    """The main function of the game.
-    
+    """The top level function of the game.
+
     This function initialises Pygame and runs the main loop
     until the user exits the program.
     """
@@ -33,7 +34,8 @@ def start() -> None:
         resolution=(1366, 768),
         volume=0.7
         )
-    # The default config to use if the config file does not exist.
+
+    # If the config file does not exist, use the default config.
 
     if not os.path.exists(config_path):
         with open(config_path, mode='wb') as file:
@@ -52,28 +54,31 @@ def start() -> None:
     # The amount of milliseconds that the simulation
     # needs to be updated by.
 
+    # The main loop should always try to keep up with the real world
+    # and only render when there is leftover time to do so.
+
     while True:
         start_time = get_millitime()
 
-        # Update `lag` so it includes the new time that needs
-        # to be processed:
+        # `lag` must be set to the new time that needs to be processed.
         lag += elapsed
-        
+
+        # The state must be updated until it catches up with the real
+        # world.
+
         while lag >= MS_PER_STEP:
 
-            # While there's still a step's worth of time to be
-            # processed, update the state and lag:
             state = state.step(MS_PER_STEP, config)
             lag -= MS_PER_STEP
 
-            if state is None:
+            # If the state has exited, `state` will be `None`. If the
+            # config needs to be changed, `state` will be a pair of
+            # a function returning the new state and the new config.
 
-                # The state has exited, so stop the loop:
+            if state is None:
                 return
 
             elif isinstance(state, tuple):
-
-                # The state is requesting a config change.
                 state_fn, config = state
 
                 with open(config_path, mode='wb') as file:
@@ -85,6 +90,6 @@ def start() -> None:
         state.render(surface)
         pygame.display.flip()
 
-        # Set `elapsed` to the amount of time
-        # that this iteration took. 
+        # `elapsed` must be set to the amount of time that this
+        # iteration took.
         elapsed = abs(get_millitime() - start_time)

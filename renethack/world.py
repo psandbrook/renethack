@@ -6,6 +6,7 @@ from renethack.entity_types import Hero
 from renethack.util import validate, forany, rand_chance
 
 MAX_MONSTERS = 6
+# The maximum number of monsters allowed per level.
 
 SOLID_EARTH = TileType('Solid earth', passable=False)
 WALL = TileType('Wall', passable=False)
@@ -16,17 +17,30 @@ CLOSED_DOOR = TileType('Closed door', passable=False)
 OPEN_DOOR = TileType('Open door', passable=True)
 
 def make_world(levels: int, level_length: int, hero: Hero) -> World:
-    """Returns a randomly generated `World` object."""
+    """
+    Returns a new `World` object, with each level randomly generated.
+
+    levels: the number of levels generated.
+    level_length: the length of the side of each level.
+    hero: the `Hero` object to place on the first level.
+    """
     validate(make_world, locals())
 
     centre = (level_length - 1) // 2
-    # The centre of each level.
+    # (centre, centre) denotes the centre of each level.
 
     def make_level(up_stairs: bool, down_stairs: bool) -> Level:
-        """Returns a randomly generated level as a `Level` object."""
+        """Returns a randomly generated `Level` object.
+
+        up_stairs: whether to place an upwards stairway on the level.
+        down_stairs: whether to place a downwards stairway on the
+            level.
+        """
         validate(make_level, locals())
 
-        # Create a level initialised to solid earth:
+        # The level must first be initialised to contain only
+        # `SOLID_EARTH` tiles.
+
         tiles = [
             [new_tile(SOLID_EARTH) for _ in range(level_length)]
             for _ in range(level_length)
@@ -34,7 +48,8 @@ def make_world(levels: int, level_length: int, hero: Hero) -> World:
 
         level = Level(tiles=tiles, entities=[])
 
-        # Create the centre room:
+        # The centre room must be created manually so it can be used
+        # as a starting point for generating the other rooms.
 
         centre_width = rand_room_len()
         centre_height = rand_room_len()
@@ -61,31 +76,31 @@ def make_world(levels: int, level_length: int, hero: Hero) -> World:
             type_=FLOOR
             )
 
+        # An upwards stairway should not be placed on the first level.
         if up_stairs:
             level.tiles[centre][centre] = new_tile(UP_STAIRS)
 
-        # Keep creating rooms until there are
-        # 20 contiguous rejections:
+        # Try to keep placing rooms until there have been 20
+        # continuous rejections.
+
         reject_count = 0
         while reject_count < 20:
 
-            # point: (int, int)
             def valid_wall_point(point: tuple) -> bool:
                 """Check if `point` is a valid wall point.
 
-                A point is a valid wall point if any point in the
-                four cardinal directions surrounding the given point
-                leads to a floor tile.
+                A point is a valid wall point if any adjacent
+                (north, south, east, west) point is a floor tile.
                 """
                 validate(valid_wall_point, locals())
 
                 x, y = point
 
                 points = [
-                    (x, y + 1),
-                    (x, y - 1),
-                    (x + 1, y),
-                    (x - 1, y)
+                    (x, y+1),
+                    (x, y-1),
+                    (x+1, y),
+                    (x-1, y)
                     ]
 
                 for p in points:
@@ -93,39 +108,40 @@ def make_world(levels: int, level_length: int, hero: Hero) -> World:
                         return False
 
                 tiles = [level.tiles[x][y] for x, y in points]
-
                 return forany(lambda t: t.type is FLOOR, tiles)
 
             walls = get_tiles(level, WALL)
             valid_walls = list(filter(valid_wall_point, walls))
             wall_point = random.choice(valid_walls)
-
             make_fn = random.choice(elements)
+
+            # Try to place a room at the selected wall point.
 
             if make_fn(level, wall_point):
                 reject_count = 0
             else:
                 reject_count += 1
 
-        # Place the downwards stairway:
+        # A downwards stairway should not be placed on the last level.
         if down_stairs:
             down_x, down_y = random.choice(get_tiles(level, FLOOR))
             level.tiles[down_x][down_y] = new_tile(DOWN_STAIRS)
 
         return level
 
-    # Create a list of levels:
+    # The first level in the `World` object is generated without an
+    # upwards stairway. The last level is generated without a
+    # downwards stairway.
+
     world = ([make_level(False, True)]
         + [make_level(True, True) for _ in range(levels - 2)]
         + [make_level(True, False)])
 
-    # Add the hero at the centre point on the first level:
     add_entity(world[0], (centre, centre), hero)
-
     return World(world, (centre, centre))
 
 def new_tile(type_: TileType) -> Tile:
-    """Returns a new `Tile` object that is initially empty."""
+    """Returns a new, empty `Tile` object."""
     validate(new_tile, locals())
 
     return Tile(
@@ -139,7 +155,10 @@ def fill_rect(
         width: int,
         height: int,
         type_: TileType) -> None:
-    """Fill a rectangular area on `level`."""
+    """Fills a rectangular area on `level`.
+
+    point: the bottom left point of the rectangle to fill.
+    """
     validate(fill_rect, locals())
 
     x, y = point
@@ -154,18 +173,19 @@ def check_fill_rect(
         width: int,
         height: int,
         type_: TileType) -> None:
-    """Fill a rectangular area on `level`.
+    """Fills a rectangular area on `level`.
 
-    The area is only filled if every tile in the area has type
-    `SOLID_EARTH`.
-
-    Returns true if fill is successful, false otherwise.
+    The area is only filled if every tile in the area has a type of
+    `SOLID_EARTH`. Returns true if successful, false otherwise.
     """
     validate(check_fill_rect, locals())
 
     x, y = point
     top_right = (x + width, y + height)
     level_length = len(level.tiles)
+
+    # The bounds of the area need to be checked to ensure the whole
+    # rectangle fits on the level.
 
     if (not point_within(level_length, point)
             or not point_within(level_length, top_right)):
@@ -194,8 +214,10 @@ def make_room(level: Level, wall_point: tuple) -> bool:
     width = rand_room_len()
     height = rand_room_len()
 
-    # North:
+    # Each direction is checked in turn to see if a room can be placed
+    # there. If there is no space on any side, return `False`.
 
+    # North
     north_check = check_fill_rect(
         level,
         point=(x - width//2 - 1, y + 1),
@@ -223,11 +245,9 @@ def make_room(level: Level, wall_point: tuple) -> bool:
             )
 
         level.tiles[x][y] = new_tile(CLOSED_DOOR)
-
         return True
 
-    # South:
-
+    # South
     south_check = check_fill_rect(
         level,
         point=(x - width//2 - 1, y - height - 1),
@@ -255,11 +275,9 @@ def make_room(level: Level, wall_point: tuple) -> bool:
             )
 
         level.tiles[x][y] = new_tile(CLOSED_DOOR)
-
         return True
 
-    # East:
-
+    # East
     east_check = check_fill_rect(
         level,
         point=(x + 1, y - height//2 - 1),
@@ -287,11 +305,9 @@ def make_room(level: Level, wall_point: tuple) -> bool:
             )
 
         level.tiles[x][y] = new_tile(CLOSED_DOOR)
-
         return True
 
-    # West:
-
+    # West
     west_check = check_fill_rect(
         level,
         point=(x - width - 1, y - height//2 - 1),
@@ -319,10 +335,8 @@ def make_room(level: Level, wall_point: tuple) -> bool:
             )
 
         level.tiles[x][y] = new_tile(CLOSED_DOOR)
-
         return True
 
-    # If there is no space on any side:
     return False
 
 def make_corridor(level: Level, wall_point: tuple) -> bool:
@@ -335,8 +349,10 @@ def make_corridor(level: Level, wall_point: tuple) -> bool:
     x, y = wall_point
     length = random.randint(5, 15)
 
-    # North:
+    # Each direction is checked in turn to see if a corridor can be
+    # placed there. If there is no space on any side, return `False`.
 
+    # North
     north_check = check_fill_rect(
         level,
         point=(x - 1, y + 1),
@@ -364,11 +380,9 @@ def make_corridor(level: Level, wall_point: tuple) -> bool:
             )
 
         level.tiles[x][y] = new_tile(CLOSED_DOOR)
-
         return True
 
-    # South:
-
+    # South
     south_check = check_fill_rect(
         level,
         point=(x - 1, y - length - 1),
@@ -396,11 +410,9 @@ def make_corridor(level: Level, wall_point: tuple) -> bool:
             )
 
         level.tiles[x][y] = new_tile(CLOSED_DOOR)
-
         return True
 
-    # East:
-
+    # East
     east_check = check_fill_rect(
         level,
         point=(x + 1, y - 1),
@@ -428,11 +440,9 @@ def make_corridor(level: Level, wall_point: tuple) -> bool:
             )
 
         level.tiles[x][y] = new_tile(CLOSED_DOOR)
-
         return True
 
-    # West:
-
+    # West
     west_check = check_fill_rect(
         level,
         point=(x - length - 1, y - 1),
@@ -460,10 +470,8 @@ def make_corridor(level: Level, wall_point: tuple) -> bool:
             )
 
         level.tiles[x][y] = new_tile(CLOSED_DOOR)
-
         return True
 
-    # If there is no space on any side:
     return False
 
 def get_tiles(level: Level, type_: TileType) -> list:
@@ -527,7 +535,9 @@ def step(world: World):
 
     level_length = len(world.current_level.tiles)
 
-    # Randomly place a new monster:
+    # If new monsters can still be placed, try and place one on a
+    # random floor tile.
+
     if len(world.current_level.entities) - 1 < MAX_MONSTERS:
 
         x = random.randrange(level_length)
@@ -538,6 +548,9 @@ def step(world: World):
                 and tile.type is FLOOR
                 and rand_chance(0.2)):
 
+            # Only the monsters appropriate to the current level must
+            # be chosen.
+
             monster_fn = random.choice(
                 renethack.entity.monster_fns[len(world.upper_levels)])
 
@@ -545,10 +558,13 @@ def step(world: World):
 
     updated_entities = []
 
-    # Update each entity on the current level:
+    # Each entity must only be updated once during each world update.
+
     for entity_point in world.current_level.entities:
 
-        # Skip over removed entities:
+        # Points containing deleted entities become `None` in the
+        # entity list.
+
         if entity_point is None:
             continue
 
@@ -565,14 +581,15 @@ def step(world: World):
         hero_x, hero_y = world.hero
         hero = world.current_level.tiles[hero_x][hero_y].entity
 
+        # If the current level has changed or the hero has died, the
+        # function must return immediately.
+
         if old_world_len != len(world.upper_levels):
-            # Return immediately if the world has changed.
             return
 
         elif hero is None:
             return
 
-    # Clean up removed entities:
     world.current_level.entities = [
         p for p in world.current_level.entities
         if p is not None

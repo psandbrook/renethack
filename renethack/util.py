@@ -4,10 +4,15 @@ import time
 import random
 
 def validate(func, args: dict) -> bool:
-    """Tests whether the values in `args` have the correct types."""
+    """Tests whether the values in `args` have the correct types.
+
+    The annotations on `func` must be types. Parameters without an
+    annotation are ignored.
+    """
 
     for name, type_ in func.__annotations__.items():
         if name != 'return' and not isinstance(args[name], type_):
+            # Ignore any return annotation.
 
             raise TypeError('argument {} = {}: expected {}, found {}'
                 .format(
@@ -21,7 +26,10 @@ def validate(func, args: dict) -> bool:
 def get_maindir() -> str:
     """
     Return the path to the directory that
-    the '__main__' file is contained in.
+    the top level python file is contained in.
+
+    The top level file is the file that is running as a script
+    (not imported).
     """
     return os.path.dirname(os.path.realpath(sys.argv[0]))
 
@@ -34,17 +42,21 @@ def get_millitime() -> float:
     return time.monotonic() * 1000.0
 
 def forany(pred, list_: list) -> bool:
-    """Tests whether a predicate holds for any element of the list."""
+    """Tests whether a predicate holds for any element of a list."""
     validate(forany, locals())
     return any(map(pred, list_))
 
 def rand_chance(prob: float) -> bool:
-    """Randomly returns True or False based on `prob`."""
+    """Randomly returns True or False based on `prob`.
+
+    `prob` is a probability between 0 and 1. `rand_chance(1.0)` always
+    returns `True` and `rand_chance(0.0)` always returns `False`.
+    """
     validate(rand_chance, locals())
     return random.random() < prob
 
 def raw_filename(path: str) -> str:
-    """Returns the file name without any extension."""
+    """Returns the base file name without any extension."""
     validate(raw_filename, locals())
 
     root, _ = os.path.splitext(path)

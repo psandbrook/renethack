@@ -14,6 +14,7 @@ from renethack.world_types import World
 from renethack.util import validate, get_maindir, raw_filename, clamp, min_clamp, max_clamp, xrange
 
 RESOLUTIONS = [(800, 600), (1280, 1024), (1366, 768), (1920, 1080)]
+# The list of valid resolutions for the game window.
 
 class Label:
     """Fixed text that is always visible."""
@@ -26,7 +27,17 @@ class Label:
             font_type: str,
             alignment: str,
             colour: tuple) -> None:
+        """Initialise a new `Label` object.
 
+        pos: a pair of floats that describe this label's position on
+            the screen. The floats must be normalized, e.g. a value
+            of (0.3, 0.6) means 30% of the screen width and 60% of
+            the screen height. (0, 0) is the top left corner.
+        height: the normalized height of the label.
+        font_type: the font family of the text.
+        alignment: the alignment of the text in relation to the
+            position. Valid values are 'centre' and 'left'.
+        """
         validate(self.__init__, locals())
 
         surface_w, surface_h = pygame.display.get_surface().get_size()
@@ -38,11 +49,13 @@ class Label:
             pygame.font.match_font(font_type),
             int(surface_h * height)
             )
-        # Create a font with the correct font type and height.
 
         self.text = text
         self.alignment = alignment
         self.colour = colour
+
+    # A `Label` object has no need to check for events or update
+    # itself, so `check_event` and `step` are empty.
 
     def check_event(self, event: EventType) -> None:
         """Check `event` with this element."""
@@ -83,9 +96,14 @@ class Button:
             width: float,
             height: float,
             text: str) -> None:
-        """Create a button that is displayed on screen.
+        """Initialise a new `Button` object.
 
-        `pos`, `width` and `height` are values between 0 and 1.
+        pos: a pair of floats that describe this buttons's position on
+            the screen. The floats must be normalized, e.g. a value
+            of (0.3, 0.6) means 30% of the screen width and 60% of
+            the screen height. (0, 0) is the top left corner.
+        width: the normalized width of the button.
+        height: the normalized height of the button.
         """
         validate(self.__init__, locals())
 
@@ -98,7 +116,8 @@ class Button:
             surface_w * width,
             surface_h * height
             )
-        # Create a rectangle with the correct top-left position.
+        # The rectangle that will be displayed on the screen to
+        # indicate the area that can be clicked.
 
         self.text = text
 
@@ -106,20 +125,24 @@ class Button:
             pygame.font.match_font('sans'),
             int(self.rect.height * 0.8)
             )
-        # Set the font to be sans and have a height of 80%
-        # of the rectangle height.
 
         self.hover = False
+        # Whether the button is being hovered over.
+
         self.pressed = False
+        # Whether the button has been clicked.
 
     def check_event(self, event: EventType) -> None:
         """Update this button using `event`."""
         validate(self.check_event, locals())
 
+        # If the mouse is located inside the rectangle, set `self.hover`
+        # to `True`, else set it to `False`. If there is a click inside
+        # the rectangle, set `self.hover` to `True`.
+
         if event.type == pygame.MOUSEMOTION:
 
             if self.rect.collidepoint(event.pos):
-                # If the mouse pointer is colliding with this button:
                 self.hover = True
 
             else:
@@ -129,22 +152,25 @@ class Button:
                 and self.rect.collidepoint(event.pos)
                 and event.button == 1):
 
-            # If this button has been clicked:
             self.pressed = True
+
             self.pressed_this_step = True
+            # Set a temporary variable to track which step the click
+            # event occured.
 
     def step(self, ms_per_step: float) -> None:
         """Step this button by `ms_per_step`."""
         validate(self.step, locals())
 
+        # Only set `self.pressed` to `False` if the click event
+        # happened during the last step, not this one.
+
         if self.pressed:
 
             if self.pressed_this_step:
-                # If this button was clicked in this step:
                 self.pressed_this_step = False
 
             else:
-                # If this button was clicked last step:
                 self.pressed = False
                 del self.pressed_this_step
 
@@ -152,7 +178,6 @@ class Button:
         """Render this button to the given surface."""
         validate(self.render, locals())
 
-        # Draw the rectangle with the correct colour:
         colour = (38, 68, 102) if self.hover else (78, 78, 78)
         surface.fill(colour, self.rect)
 
@@ -163,25 +188,33 @@ class Button:
             colour
             )
 
-        centre_xoffset = font_render.get_width() / 2
-        centre_yoffset = font_render.get_height() / 2
-        centre_x, centre_y = self.rect.center
+        x_offset = font_render.get_width() / 2
+        y_offset = font_render.get_height() / 2
+        x, y = self.rect.center
 
-        surface.blit(
-            font_render,
-            (centre_x - centre_xoffset, centre_y - centre_yoffset)
-            )
+        surface.blit(font_render, (x - x_offset, y - y_offset))
 
 class Image:
     """Displays an image loaded from a file."""
 
     def __init__(self, filename: str, pos: tuple, height: float) -> None:
+        """Initialise a new `Image` object.
+
+        pos: a pair of floats that describe this image's position on
+            the screen. The floats must be normalized, e.g. a value
+            of (0.3, 0.6) means 30% of the screen width and 60% of
+            the screen height. (0, 0) is the top left corner.
+        height: the normalized height of the image.
+        """
         validate(self.__init__, locals())
 
         surface_w, surface_h = pygame.display.get_surface().get_size()
         pos_x, pos_y = pos
-
         raw_img = pygame.image.load(filename)
+
+        # When resizing the image to fit `height`, the image ratio must
+        # be preserved.
+
         height_px = surface_h * height
         width_px = height_px / (raw_img.get_height() / raw_img.get_width())
 
@@ -213,7 +246,14 @@ class TextBox:
     """Displays text in a box that the user has input."""
 
     def __init__(self, pos: tuple, height: float) -> None:
+        """Initialise a new `TextBox` object.
 
+        pos: a pair of floats that describe this text box's position on
+            the screen. The floats must be normalized, e.g. a value
+            of (0.3, 0.6) means 30% of the screen width and 60% of
+            the screen height. (0, 0) is the top left corner.
+        height: the normalized height of the text box.
+        """
         validate(self.__init__, locals())
 
         surface_w, surface_h = pygame.display.get_surface().get_size()
@@ -229,6 +269,9 @@ class TextBox:
             surface_h * height * 0.05
             )
 
+        # The text of the label must be updated each step, so
+        # initially it is set empty.
+
         self.label = Label(
             pos=pos,
             height=height*0.8,
@@ -239,11 +282,15 @@ class TextBox:
             )
 
     def get_text(self) -> str:
+        """Returns the text of the label."""
         return self.label.text
 
     def check_event(self, event: EventType) -> None:
         """Check `event` with this element."""
         validate(self.check_event, locals())
+
+        # If backspace is pressed, the last character must be removed.
+        # If any other key is pressed, add its character to the label.
 
         if event.type == pygame.KEYDOWN:
 
@@ -258,7 +305,7 @@ class TextBox:
         validate(self.step, locals())
 
     def render(self, surface: Surface) -> None:
-        """Render this label to the given surface."""
+        """Render this element to the given surface."""
         validate(self.render, locals())
 
         surface.fill((255, 255, 255), self.underline_rect)
@@ -273,7 +320,16 @@ class WorldDisplay:
             width: float,
             height: float,
             world: World) -> None:
-        """Initialise this display with `world`."""
+        """Initialise a new `WorldDisplay` object.
+
+        pos: a pair of floats that describe this display's position on
+            the screen. The floats must be normalized, e.g. a value
+            of (0.3, 0.6) means 30% of the screen width and 60% of
+            the screen height. (0, 0) is the top left corner.
+        width: the normalized width of the display.
+        height: the normalized height of the display.
+        world: the `World` object to be displayed.
+        """
         validate(self.__init__, locals())
 
         surface_w, surface_h = pygame.display.get_surface().get_size()
@@ -285,23 +341,23 @@ class WorldDisplay:
             surface_w * width,
             surface_h * height
             )
-        # Create a rectangle with the correct top-left position.
 
         self.world = world
         level_length = len(world.current_level.tiles)
-
         rect_width, rect_height = self.rect.size
 
         self.tile_length = min(
             rect_width // level_length,
             rect_height // level_length
             )
-        # Calculate the length of each tile in pixels.
 
         def icon_entries() -> GeneratorType:
             """Generates a dict of names to tile icons."""
 
             icon_dir = os.path.join(get_maindir(), 'data', 'icons')
+
+            # All of the image files in the icons directory must be
+            # loaded into a map of icon names to `Surface` objects.
 
             for file in os.listdir(icon_dir):
 
@@ -320,13 +376,14 @@ class WorldDisplay:
                     yield name, icon
 
         self.icons = dict(icon_entries())
-        # Create a dictionary of names to `Surface` objects.
 
         def y_rects(x: int) -> GeneratorType:
             """Generates the `x`th column of rectangles."""
             validate(y_rects, locals())
 
             display_botleft_x, display_botleft_y = self.rect.bottomleft
+
+            # For each row, a column of rectangles must be generated.
 
             for y in range(level_length):
 
@@ -341,17 +398,26 @@ class WorldDisplay:
                     )
 
         self.tile_rects = [list(y_rects(x)) for x in range(level_length)]
-        # A grid of rectangles that indicate where each tile should
-        # be rendered.
+        # A grid of rectangles that represent each tile in the current
+        # level.
 
         self.hover = None
+        # The co-ordinates of the tile that the mouse is positioned
+        # over, or `None` if the mouse is outside of the world
+        # display area.
+
         self.pressed = None
+        # The co-ordinates of the tile that the mouse has clicked, or
+        # `None` if a tile has not been clicked.
 
     def check_event(self, event: EventType) -> None:
         """Update this component using `event`."""
         validate(self.check_event, locals())
 
         level_length = len(self.world.current_level.tiles)
+
+        # If there is a mouse motion or click event, set `self.hover`
+        # and `self.pressed` to the correct values.
 
         if event.type == pygame.MOUSEMOTION:
 
@@ -366,18 +432,20 @@ class WorldDisplay:
 
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
 
-            self.pressed_this_step = True
-
             for x in range(level_length):
                 for y in range(level_length):
 
                     if self.tile_rects[x][y].collidepoint(event.pos):
                         self.pressed = (x, y)
+                        self.pressed_this_step = True
                         return
 
     def step(self, ms_per_step: float) -> None:
         """Step this component by `ms_per_step`."""
         validate(self.step, locals())
+
+        # Only set `self.pressed` to `None` if the click event happened
+        # during the last step, not this one.
 
         if self.pressed is not None:
 
@@ -394,7 +462,8 @@ class WorldDisplay:
 
         level_length = len(self.world.current_level.tiles)
 
-        # Render the level tile by tile:
+        # Render each tile in the level using the appropriate icon.
+
         for x in range(level_length):
             for y in range(level_length):
 
@@ -402,13 +471,11 @@ class WorldDisplay:
                 rect = self.tile_rects[x][y]
 
                 if tile.entity is not None:
-                    # If there is an entity on the tile,
-                    # render it instead:
-
                     icon = self.icons[tile.entity.icon_name].copy()
-
                 else:
                     icon = self.icons[tile.type.name].copy()
+
+                # If the tile is being hovered over, highlight it.
 
                 if self.hover == (x, y):
                     colourise(icon, (64, 64, 64))
@@ -419,7 +486,14 @@ class StatusDisplay:
     """Displays the hero's status."""
 
     def __init__(self, pos: tuple, width: float, hero: Hero) -> None:
+        """Initialise a new `StatusDisplay` object.
 
+        pos: a pair of floats that describe this display's position on
+            the screen. The floats must be normalized, e.g. a value
+            of (0.3, 0.6) means 30% of the screen width and 60% of
+            the screen height. (0, 0) is the top left corner.
+        width: the normalized width of the display.
+        """
         validate(self.__init__, locals())
 
         surface_w, surface_h = pygame.display.get_surface().get_size()
@@ -429,6 +503,8 @@ class StatusDisplay:
         left_pos = pos_x - width/2
         text_height = height*0.1
 
+        # Generate a sequence of labels, each with the same x position
+        # and a different y position.
         labels = (
             Label(
                 pos=(left_pos, top_pos + height*x),
@@ -491,7 +567,15 @@ class MessageDisplay:
     """Displays game messages."""
 
     def __init__(self, pos: tuple, width: float, height: float) -> None:
+        """Initialise a new `MessageDisplay` object.
 
+        pos: a pair of floats that describe this display's position on
+            the screen. The floats must be normalized, e.g. a value
+            of (0.3, 0.6) means 30% of the screen width and 60% of
+            the screen height. (0, 0) is the top left corner.
+        width: the normalized width of the display.
+        height: the normalized height of the display.
+        """
         validate(self.__init__, locals())
 
         surface_w, surface_h = pygame.display.get_surface().get_size()
@@ -503,6 +587,12 @@ class MessageDisplay:
         line_height = height*0.03
         self.font_height = line_height*0.8
 
+        # Because a message may be of an arbitrary length, there must
+        # be a mechanism that wraps the text and displays it on
+        # multiple lines.
+
+        # A monospace font family must be used because a constant
+        # character width is required.
         font = Font(
             pygame.font.match_font('mono'),
             int(surface_h * self.font_height)
@@ -511,6 +601,9 @@ class MessageDisplay:
         font_px_width, _ = font.size('a')
         self.chars_per_line = int(surface_w * width / font_px_width)
         self.lines = int(surface_h * height / (surface_h * line_height))
+
+        # The possible y positions for labels must be saved for use
+        # in the render function.
 
         self.y_positions = list(
             xrange(
@@ -521,6 +614,7 @@ class MessageDisplay:
             )
 
     def add_message(self, msg: str) -> None:
+        """Add a message to the end of the message list."""
         validate(self.add_message, locals())
         self.messages.append(msg)
 
@@ -536,14 +630,21 @@ class MessageDisplay:
         """Render this element to the given surface."""
         validate(self.render, locals())
 
+        # Any messages that are over the character limit must be split
+        # onto multiple lines.
         self.messages = [
             str_
             for msg in self.messages
             for str_ in textwrap.wrap(msg, width=self.chars_per_line)
             ]
 
-        if len(self.messages) > self.lines:
-            del self.messages[:len(self.messages) - self.lines + 1]
+        # If there are too many lines of messages, remove the ones at
+        # the beginning of the list.
+        while len(self.messages) > self.lines:
+            del self.messages[0]
+
+        # The colour of each line must be toggled between white and
+        # grey to allow each line to be more easily distinguished.
 
         colours = itertools.cycle([(255, 255, 255), (190, 190, 190)])
         seq = zip(self.messages, self.y_positions, colours)
@@ -565,7 +666,14 @@ class ScoreDisplay:
     """Displays a character's score."""
 
     def __init__(self, pos: tuple, height: float, score: Score) -> None:
+        """Initialise a new `ScoreDisplay` object.
 
+        pos: a pair of floats that describe this display's position on
+            the screen. The floats must be normalized, e.g. a value
+            of (0.3, 0.6) means 30% of the screen width and 60% of
+            the screen height. (0, 0) is the top left corner.
+        height: the normalized height of the display.
+        """
         validate(self.__init__, locals())
 
         pos_x, pos_y = pos
@@ -625,7 +733,14 @@ class ResolutionDisplay:
     """Displays the resolution and provides controls to chage it."""
 
     def __init__(self, pos: tuple, height: float) -> None:
+        """Initialise a new `ResolutionDisplay` object.
 
+        pos: a pair of floats that describe this display's position on
+            the screen. The floats must be normalized, e.g. a value
+            of (0.3, 0.6) means 30% of the screen width and 60% of
+            the screen height. (0, 0) is the top left corner.
+        height: the normalized height of the display.
+        """
         validate(self.__init__, locals())
 
         pos_x, pos_y = pos
@@ -663,10 +778,12 @@ class ResolutionDisplay:
 
     def res_update(self, res: tuple) -> tuple:
         """
-        Update this component using `res`. Returns
-        the new resolution.
+        Update this component using `res`. Returns the new resolution.
         """
         validate(self.res_update, locals())
+
+        # If either button has been pressed, get the appropriate
+        # resolution. Otherwise keep the current one.
 
         res_index = RESOLUTIONS.index(res)
 
@@ -706,7 +823,14 @@ class VolumeDisplay:
     """Displays the volume and provides controls to change it."""
 
     def __init__(self, pos: tuple, height: float) -> None:
+        """Initialise a new `VolumeDisplay` object.
 
+        pos: a pair of floats that describe this display's position on
+            the screen. The floats must be normalized, e.g. a value
+            of (0.3, 0.6) means 30% of the screen width and 60% of
+            the screen height. (0, 0) is the top left corner.
+        height: the normalized height of the display.
+        """
         validate(self.__init__, locals())
 
         surface_w, surface_h = pygame.display.get_surface().get_size()
@@ -733,6 +857,8 @@ class VolumeDisplay:
 
         self.components = [self.left_button, self.right_button]
 
+        # Generate a list of rectangles that represent the current
+        # volume, depending on which rectangles are rendered.
         self.rects = [
             Rect(
                 surface_w * (pos_x - width/2 + width*x),
@@ -749,8 +875,7 @@ class VolumeDisplay:
 
     def vol_update(self, volume: float) -> float:
         """
-        Update this component using `volume`. Returns
-        the new volume.
+        Update this component using `volume`. Returns the new volume.
         """
         validate(self.vol_update, locals())
 
@@ -789,8 +914,8 @@ class VolumeDisplay:
 
 def colourise(surface: Surface, rgb: tuple) -> Surface:
     """
-    Returns the same surface with an rgb value added
-    to all the pixels on it.
+    Returns the same surface with an rgb value added to all the pixels
+    on it.
     """
     validate(colourise, locals())
 

@@ -9,9 +9,10 @@ from renethack.util import validate
 Config = collections.namedtuple('Config', 'fullscreen resolution volume')
 # fullscreen: bool
 # resolution: (int, int)
+# volume: float
 
 def apply(config: Config) -> Surface:
-    """Apply the given config and return the resultant surface object.
+    """Apply the given config and return the resulting surface object.
 
     `pygame.display.set_mode` is used to apply the config.
     """

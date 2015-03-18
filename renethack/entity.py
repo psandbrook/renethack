@@ -15,7 +15,7 @@ WEST = Direction()
 NORTHWEST = Direction()
 
 def direction_to_point(direction: Direction) -> tuple:
-    """Convert a `Direction` to a vector."""
+    """Converts a `Direction` to a vector."""
     validate(direction_to_point, locals())
 
     if direction is NORTH:
@@ -43,7 +43,7 @@ def direction_to_point(direction: Direction) -> tuple:
         return (-1, 1)
 
 def point_to_direction(point: tuple) -> Direction:
-    """Convert a vector to a `Direction`."""
+    """Converts a vector to a `Direction`."""
     validate(point_to_direction, locals())
 
     if point == (0, 1):
@@ -74,25 +74,26 @@ def point_to_direction(point: tuple) -> Direction:
         raise ValueError('point {} has incorrect form'.format(point))
 
 def find_path(point: tuple, target_point: tuple, level: Level) -> list:
-    """Find a path from `point` to `target_point` through `level`."""
+    """Find a path from `point` to `target_point` through `level`.
+
+    Returns a list of `Direction`s that describe the path.
+    """
     validate(find_path, locals())
+
+    # The A* algorithm is used in this function.
 
     open_list = [Node(None, point, target_point)]
     closed_list = []
 
     while True:
 
-        # Get the node with the lowest final cost:
         open_list.sort(key=lambda n: n.final_cost)
         current_node = open_list[0]
 
-        # Move the node to the closed list:
         open_list.remove(current_node)
         closed_list.append(current_node)
 
         if current_node.point == target_point:
-            # If the current node is at the target point,
-            # the path has been found.
             break
 
         x, y = current_node.point
@@ -107,7 +108,6 @@ def find_path(point: tuple, target_point: tuple, level: Level) -> list:
             (x-1, y),
             (x-1, y+1)
             ]
-        # The list of all adjacent points.
 
         for adj_point in adjacent:
 
@@ -118,6 +118,9 @@ def find_path(point: tuple, target_point: tuple, level: Level) -> list:
 
             adj_x, adj_y = adj_point
             tile = level.tiles[adj_x][adj_y]
+
+            # If the tile type is not passable but is a closed door,
+            # it should still be considered.
 
             if ((tile.type.passable or tile.type is CLOSED_DOOR)
                     and not on_closed_list):
@@ -138,6 +141,10 @@ def find_path(point: tuple, target_point: tuple, level: Level) -> list:
 
     path = []
 
+    # Starting from the target point's node, the list of directions is
+    # built up by visiting each node's parent until the starting point
+    # is reached.
+
     while current_node.point != point:
 
         current_x, current_y = current_node.point
@@ -151,7 +158,7 @@ def find_path(point: tuple, target_point: tuple, level: Level) -> list:
     return path
 
 def rand_hero(name: str) -> Hero:
-    """Return a randomly created hero."""
+    """Returns a new hero with random stats."""
     validate(rand_hero, locals())
 
     return Hero(
@@ -304,6 +311,11 @@ def new_couatl() -> Monster:
         strength=10,
         open_doors=True
         )
+
+# To generate different monsters on different levels, each level has
+# an assocciated list of monsters that should be generated.
+# `monster_fns[0]` is the list for the first level, `monster_fns[1]`
+# is the list for the second level etc.
 
 monster_fns = [
     [new_giant_ant, new_gremlin, new_giant_rat],
