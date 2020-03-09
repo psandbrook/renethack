@@ -393,7 +393,7 @@ class Hero:
         # Make the hero perform the next action in the list if they
         # have enough energy.
 
-        if self.energy >= 100: 
+        if self.energy >= 100:
 
             action = self.actions[0]
             self.actions = self.actions[1:]
