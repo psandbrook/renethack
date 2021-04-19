@@ -14,3 +14,7 @@ Python, Pygame
 ``` bash
 python main.py
 ```
+
+## How to play
+
+![How to play](docs/how-to-play.png)
